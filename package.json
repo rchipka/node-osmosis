@@ -1,7 +1,7 @@
 {
-    "name": "promise-parser",
-    "version": "0.0.5",
-    "description": "HTML/XML parser and web scraper",
+    "name": "osmosis",
+    "version": "0.0.2",
+    "description": "Web scraper for NodeJS",
     "keywords": [
         "web",
         "scraper",
@@ -34,8 +34,8 @@
     },
     "readmeFilename": "Readme.md",
     "bugs": {
-        "url": "https://github.com/rc0x03/node-promise-parser/issues"
+        "url": "https://github.com/rc0x03/node-osmosis/issues"
     },
-    "_id": "node-promise-parser@0.1",
-    "_from": "node-promise-parser@"
+    "_id": "node-osmosis@0.0.2",
+    "_from": "node-osmosis@"
 }

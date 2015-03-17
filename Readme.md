@@ -24,11 +24,11 @@ osmosis
 .find('h1 + div a')
 .set('location')
 .follow('@href')
-.find('header + table a')
+.find('header + div + div li > a')
 .set('category')
 .follow('@href')
-.find('p > a')
-.follow('@href', { next: '.button.next' })
+.find('p > a', { next: '.button.next' })
+.follow('@href')
 .set({
     'title':        'section > h2',
     'description':  '#postingbody',
@@ -77,10 +77,12 @@ Find elements based on `selector` within the current context
 
 #####opts
 
-- next [selector or callback([next])]
+- next: [selector]
     Continue to the next page from the URL found in `selector`.
-    Alternatively, a callback function can provide the next page.
-- stop [callback] - If callback returns true, `next` will stop.
+- next: callback(context, data, next)
+    Alternatively, a callback function can provide the next page
+    by calling next(context, [data]);
+- stop: [callback] - If callback returns true, `next` will stop.
 
 ####.follow([selector], [opts])
 
@@ -110,38 +112,34 @@ o.set({
 });
 ```
 
-####.then(callback(next))
+####.then(callback(context, data, next))
 
-Calls `callback` from the context of the current element.
-To continue, the callback must call `next([context])` at least once.
+Calls `callback` with the context of the current element.
+To continue, the callback must call `next([context], [data])` at least once.
 The `context` argument can optionally be a new context.
 
-The `this` value of `.then` callback function is set to the current context.
-The context is a libxmljs `Element` object representing the current HTML/XML element.
-In addition to all of the [libxmljs `Element`](https://github.com/polotek/libxmljs/wiki/Element) functions,
-each `context` also supports these functions:
+The context is a [libxmljs `Element`](https://github.com/polotek/libxmljs/wiki/Element) object representing the current HTML/XML element.
+The `then` promise has these functions built-in to its `this` value:
 
-* context.request(url, [data], callback(context))
-* context.post(url, [data], callback(context))
-* context.log(msg)
-* context.debug(msg)
-* context.error(msg)
-* context.data [object]
+* this.request(method, url, [data], callback([err], context))
+* this.log(msg)
+* this.debug(msg)
+* this.error(msg)
 
 #####Example: Find and follow links
 ```javascript
-pp.then(function(next) {
-	var links = this.find('a');
+o.then(function(context, data, next) {
+	var links = context.find('a');
 	this.log('found '+links.length+' links');
 	links.forEach(function(link) {
-		next(link);
+		next(link, data);
 	});
 })
 ```
 
 ####.data(callback(data))
 
-Get data stored in `context.data`
+Get data stored via `set`
 
 ####.done(callback)
 
