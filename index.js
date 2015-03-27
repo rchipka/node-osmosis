@@ -36,6 +36,7 @@ libxml.Element.prototype.content = function() {
 
 
 var default_opts = {
+	parse_response: false,
         decode: true,
         follow: true,
         compressed: true,
@@ -70,18 +71,6 @@ Parser.prototype.parse = function(data) {
         return libxml.parseHtml(data);
 }
 
-Parser.prototype.get = function(depth, url, data, cb, opts) {
-    if (cb === undefined)
-        cb = data;
-    this.request(depth, 'get', url, data, cb, opts);
-}
-
-Parser.prototype.post = function(depth, url, data, cb, opts) {
-    if (cb === undefined)
-        cb = data;
-    this.request(depth, 'post', url, data, cb, opts);
-}
-
 Parser.prototype.request = function(depth, method, url, params, cb, opts) {
     opts = opts||{};
     this.stack++;
@@ -109,7 +98,7 @@ Parser.prototype.requestQueue = function() {
 		if (err !== null)
 		    throw(err);
 		var document = null;
-		if (res.headers['content-type'].indexOf('xml') !== -1)
+		if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
 		    document = libxml.parseXml(data);
 		else
 		    document = libxml.parseHtml(data);
@@ -159,7 +148,7 @@ Parser.prototype.resources = function() {
     var memDiff = toMB(mem.rss-this.lastram);
     if (memDiff.charAt(0) !== '-')
 	memDiff = '+'+memDiff;
-    this.p.debug('stack: '+this.stack+', RAM: '+toMB(mem.rss)+' ('+memDiff+') requests: '+this.requestCount+', heap: '+toMB(mem.heapUsed)+' / '+toMB(mem.heapTotal));
+    this.p.debugNext('(process) stack: '+this.stack+', RAM: '+toMB(mem.rss)+' ('+memDiff+') requests: '+this.requestCount+', heap: '+toMB(mem.heapUsed)+' / '+toMB(mem.heapTotal));
     this.lastram = mem.rss;
     this.lastStack = c;
 }
@@ -179,5 +168,4 @@ function extend(obj1, obj2, replace) {
 var parser = new Parser();
 var Promise = require('./lib/promise.js')(parser);
 parser.p = new Promise();
-parser.p.name = 'process';
 module.exports = parser.p;
