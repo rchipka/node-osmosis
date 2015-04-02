@@ -1,5 +1,5 @@
 var URL         = require('url');
-var needle	= require('/usr/lib/node_modules/needle');
+var needle	= require('needle');
 var libxml	= require('libxmljs');
 var util        = require('util');
 var css2xpath   = require('./lib/css2xpath.js');
@@ -20,7 +20,6 @@ libxml.Element.prototype.find = function(sel, from_root) {
         if (!from_root)
             sel = this.path()+sel;
     }
-    //console.log(sel);
     return this.findXPath(sel)||[];
 }
 
@@ -38,7 +37,7 @@ libxml.Element.prototype.content = function() {
 var default_opts = {
 	parse_response: false,
         decode: true,
-        follow: true,
+        follow: 3,
         compressed: true,
         timeout: 30 * 1000,
         user_agent: 'Mozilla/5.0 (Windows NT x.y; rv:10.0) Gecko/20100101 Firefox/10.0',
@@ -74,7 +73,7 @@ Parser.prototype.parse = function(data) {
 Parser.prototype.request = function(depth, method, url, params, cb, opts) {
     opts = opts||{};
     this.stack++;
-    this.queue[depth||0].push([opts.tries||this.opts.tries, method, url, params, cb]);
+    this.queue[depth||0].push([opts.tries||this.opts.tries, method, url, params, cb, opts]);
     this.requestQueue();
 }
 
@@ -89,7 +88,7 @@ Parser.prototype.requestQueue = function() {
         var url = arr.shift();
         var params = arr.shift();
         var cb = arr.shift();
-        var opts = arr.shift();
+        var opts = arr.shift()||{};
         self.requests++;
         self.requestCount++;
 	needle.request(method, url, params, opts, function(err, res, data) {
@@ -97,21 +96,25 @@ Parser.prototype.requestQueue = function() {
 		self.requests--;
 		if (err !== null)
 		    throw(err);
-		var document = null;
-		if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
-		    document = libxml.parseXml(data);
-		else
-		    document = libxml.parseHtml(data);
-		if (document.errors[0] !== undefined && document.errors[0].code === 4)
-			throw(new Error('Document is empty'))
-		document.method = method;
-		document.url = url;
-		if (cb.length === 1)
-		    cb(document);
-		else
-		    cb(null, document);
-		document = null;
-		data = null;
+		if (opts.parse !== false) {
+		    var document = null;
+		    if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
+			document = libxml.parseXml(data);
+		    else
+			document = libxml.parseHtml(data);
+		    if (document.errors[0] !== undefined && document.errors[0].code === 4)
+			    throw(new Error('Document is empty'))
+		    document.method = method;
+		    document.url = url;
+		    if (cb.length === 1)
+			cb(document);
+		    else
+			cb(null, document);
+		    document = null;
+		    data = null;
+		}else{
+		    cb(err, res, data)
+		}
 		self.requestQueue();
 	    }catch(err) {
 		if (tries > 0) {
@@ -119,7 +122,7 @@ Parser.prototype.requestQueue = function() {
 		    self.queue[self.queue.length-1].push([tries, method, url, params, cb])
 		}
 		err.message += '\n['+method+'] '+url+' tries: '+(self.opts.tries-tries)+' - '+err.message;
-		if (cb.length === 2)
+		if (cb.length > 1)
 		    cb(err.stack, null);
 		self.requestQueue();
 	    }
