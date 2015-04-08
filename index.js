@@ -4,13 +4,25 @@ var libxml	= require('libxmljs');
 var util        = require('util');
 var css2xpath   = require('./lib/css2xpath.js');
 
+/*
+ *
+ * libxml overrides:
+ * 
+ */
+
+/*
+ make context.doc() always return the current Document
+ even if the context already is the current Document
+ */
 libxml.Document.prototype.doc = function() {
     return this;
 }
 
+// move the original context.find to context.findXPath
 libxml.Document.prototype.findXPath = libxml.Document.prototype.find;
 libxml.Element.prototype.findXPath = libxml.Element.prototype.find;
 
+// detect if it a CSS selector and convert to XPath
 libxml.Document.prototype.find,
 libxml.Element.prototype.find = function(sel, from_root) {
     if (sel.charAt(0) !== '/') {
@@ -23,6 +35,7 @@ libxml.Element.prototype.find = function(sel, from_root) {
     return this.findXPath(sel)||[];
 }
 
+// try different ways of getting content
 libxml.Element.prototype.content = function() {
     if (this.text !== undefined)
         return this.text().trim();
@@ -35,20 +48,21 @@ libxml.Element.prototype.content = function() {
 
 
 var default_opts = {
-	parse_response: false,
-        decode: true,
-        follow: 3,
-        compressed: true,
-        timeout: 30 * 1000,
-        user_agent: 'Mozilla/5.0 (Windows NT x.y; rv:10.0) Gecko/20100101 Firefox/10.0',
-        concurrency: 5,
-        tries: 3
+    parse_response: false,
+    decode: true,
+    follow: 3,
+    compressed: true,
+    timeout: 30 * 1000,
+    user_agent: 'Mozilla/5.0 (Windows NT x.y; rv:10.0) Gecko/20100101 Firefox/10.0',
+    concurrency: 5,
+    tries: 3
 }
 
 needle.defaults(default_opts);
 
 var Parser = function(opts) {
     opts = opts||{};
+    this.libxml = libxml;
     this.needle = needle;
     var mem = process.memoryUsage();
     this.lastram = mem.rss;
@@ -138,10 +152,6 @@ Parser.prototype.nextQueue = function() {
         }
     }
     return false;
-}
-
-Parser.prototype.parse = function(data, opts) {
-    return libxml.parseHtml(data)
 }
 
 Parser.prototype.resources = function() {
