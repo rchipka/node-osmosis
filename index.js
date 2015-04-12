@@ -1,5 +1,6 @@
 var URL         = require('url');
 var needle	= require('needle');
+var cookies	= require('needle/lib/cookies.js');
 var libxml	= require('libxmljs');
 var util        = require('util');
 var css2xpath   = require('./lib/css2xpath.js');
@@ -22,17 +23,49 @@ libxml.Document.prototype.doc = function() {
 libxml.Document.prototype.findXPath = libxml.Document.prototype.find;
 libxml.Element.prototype.findXPath = libxml.Element.prototype.find;
 
+
+libxml.Element.prototype.getAttr = libxml.Element.prototype.attr;
+libxml.Element.prototype.attr = function(name) {
+    if (typeof name === 'string') {
+	var attr = this.getAttr(name);
+	if (attr !== null)
+	    return attr.value();
+	else
+	    return null;
+    }else{
+	return this.getAttr(name);
+    }
+}
+libxml.Document.prototype.css2xpath,
+libxml.Element.prototype.css2xpath = function(sel, from_root) {
+    sel = sel.replace('@', '/@');
+    sel = css2xpath('.//'+sel);
+    sel = sel.replace('///', '//');
+    /*
+    if (!from_root)
+	sel = this.path()+sel;
+	*/
+    return sel;
+}
+var cachedSelectors = {};
 // detect if it a CSS selector and convert to XPath
 libxml.Document.prototype.find,
-libxml.Element.prototype.find = function(sel, from_root) {
-    if (sel.charAt(0) !== '/') {
-    	sel = sel.replace('@', '/@');
-        sel = css2xpath('//'+sel);
-        sel = sel.replace('///', '//');
-        if (!from_root)
-            sel = this.path()+sel;
+libxml.Element.prototype.find = function(sel, cache) {
+    var xpath;
+    if (cache !== false)
+	xpath = cachedSelectors[sel];
+    if (xpath === undefined) {
+	if (sel.charAt(0) !== '/') {
+	    xpath = this.css2xpath(sel)
+	    if (cache !== false)
+		cachedSelectors[sel] = xpath;
+	}else{
+	    xpath = sel;
+	}
     }
-    return this.findXPath(sel)||[];
+    var res = this.findXPath(xpath)||[];
+    res.xpath = xpath;
+    return res;
 }
 
 // try different ways of getting content
@@ -51,14 +84,15 @@ var default_opts = {
     parse_response: false,
     decode: true,
     follow: 3,
+    //follow_set_cookies: true, // broken with latest Needle version
+    follow_set_referer: true,
     compressed: true,
     timeout: 30 * 1000,
+    accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     user_agent: 'Mozilla/5.0 (Windows NT x.y; rv:10.0) Gecko/20100101 Firefox/10.0',
     concurrency: 5,
     tries: 3
 }
-
-needle.defaults(default_opts);
 
 var Parser = function(opts) {
     opts = opts||{};
@@ -69,6 +103,7 @@ var Parser = function(opts) {
     this.lastStack = 0;
     this.stack = 0;
     this.opts = extend(opts, default_opts, false);
+    this.needle.defaults(this.opts);
     this.requestCount = 0;
     this.requests = 0;
     this.queue = {
@@ -103,6 +138,7 @@ Parser.prototype.requestQueue = function() {
         var params = arr.shift();
         var cb = arr.shift();
         var opts = arr.shift()||{};
+	opts.cookies = parser.opts.cookies;
         self.requests++;
         self.requestCount++;
 	needle.request(method, url, params, opts, function(err, res, data) {
@@ -111,6 +147,8 @@ Parser.prototype.requestQueue = function() {
 		if (err !== null)
 		    throw(err);
 		if (opts.parse !== false) {
+		    if (!res.socket._httpMessage._hasBody || data.length == 0)
+			throw(new Error('Document is empty'))
 		    var document = null;
 		    if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
 			document = libxml.parseXml(data);
@@ -118,8 +156,31 @@ Parser.prototype.requestQueue = function() {
 			document = libxml.parseHtml(data);
 		    if (document.errors[0] !== undefined && document.errors[0].code === 4)
 			    throw(new Error('Document is empty'))
-		    document.method = method;
-		    document.url = url;
+		    document.request = {
+			url: url,
+			path: res.socket._httpMessage.path,
+			method: method,
+			params: params,
+			headers: res.req._headers
+		    }
+		    document.response = {
+			size: {
+			    total: res.socket.bytesRead,
+			    headers: res.socket.bytesRead-data.length,
+			    body: data.length,
+			},
+			headers: res.headers
+		    }
+		    if (res.cookies !== undefined) {
+			parser.p.config('cookies', res.cookies);
+		    }else if (res.req._headers['cookie'] !== undefined) {
+			/*
+			 * if Needle followed a redirect after login
+			 * we won't have a set-cookie response header
+			 * so we'll look in the request header instead
+			*/
+			parser.p.config('cookies', cookies.read(res.req._headers['cookie']));
+		    }
 		    if (cb.length === 1)
 			cb(document);
 		    else

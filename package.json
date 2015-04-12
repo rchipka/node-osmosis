@@ -1,6 +1,6 @@
 {
     "name": "osmosis",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "description": "Web scraper for NodeJS",
     "keywords": [
         "web",
@@ -36,6 +36,6 @@
     "bugs": {
         "url": "https://github.com/rc0x03/node-osmosis/issues"
     },
-    "_id": "node-osmosis@0.0.4",
+    "_id": "node-osmosis@0.0.5",
     "_from": "node-osmosis@"
 }
