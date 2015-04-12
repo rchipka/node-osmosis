@@ -84,7 +84,7 @@ var default_opts = {
     parse_response: false,
     decode: true,
     follow: 3,
-    //follow_set_cookies: true, // broken with latest Needle version
+    //follow_set_cookies: true, // broken as of Needle 0.9.1 (http://github.com/tomas/needle/issues/121)
     follow_set_referer: true,
     compressed: true,
     timeout: 30 * 1000,
