@@ -1,6 +1,6 @@
 {
     "name": "osmosis",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "description": "Web scraper for NodeJS",
     "keywords": [
         "web",
@@ -19,8 +19,8 @@
         "email": "noreply@inbox.com"
     },
     "dependencies": {
-        "needle": ">=0.7.0",
-        "libxmljs": ">=0.9.0"
+        "needle": ">=0.9.2",
+        "libxmljs": ">=0.14.0"
     },
     "licenses": [
         {
@@ -36,6 +36,6 @@
     "bugs": {
         "url": "https://github.com/rc0x03/node-osmosis/issues"
     },
-    "_id": "node-osmosis@0.0.6",
+    "_id": "node-osmosis@0.0.7",
     "_from": "node-osmosis@"
 }

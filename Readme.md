@@ -15,9 +15,7 @@ HTML/XML parser and web scraper for NodeJS.
 
 ###Coming soon:
 
-DOM support with the ability to run scripts and CSS without a headless browser.
-Scripting support will allow Osmosis to access dynamically generated content.
-CSS support will allow Osmosis to access background-image, element size, colors, etc.
+DOM support and the ability to run scripts/CSS without a headless browser.
 
 ##Example: scrape all craigslist listings
 

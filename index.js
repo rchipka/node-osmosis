@@ -36,9 +36,11 @@ libxml.Element.prototype.attr = function(name) {
 	return this.getAttr(name);
     }
 }
-libxml.Document.prototype.css2xpath,
+libxml.Document.prototype.css2xpath =
 libxml.Element.prototype.css2xpath = function(sel, from_root) {
     sel = sel.replace('@', '/@');
+    if (sel.charAt(0) === '[')
+	sel = '*'+sel;
     sel = css2xpath('.//'+sel);
     sel = sel.replace('///', '//');
     /*
@@ -48,8 +50,10 @@ libxml.Element.prototype.css2xpath = function(sel, from_root) {
     return sel;
 }
 var cachedSelectors = {};
-// detect if it a CSS selector and convert to XPath
-libxml.Document.prototype.find,
+// detect if `sel` is a CSS selector and convert to XPath
+libxml.Document.prototype.find = function(sel, cache) {
+    return this.root().find(sel, cache);
+}
 libxml.Element.prototype.find = function(sel, cache) {
     var xpath;
     if (cache !== false)
@@ -81,10 +85,11 @@ libxml.Element.prototype.content = function() {
 
 
 var default_opts = {
+    processStatsThreshold: 15, // print process stats after +-15 megabytes or requests
     parse_response: false,
     decode: true,
     follow: 3,
-    //follow_set_cookies: true, // broken as of Needle 0.9.1 (http://github.com/tomas/needle/issues/121)
+    follow_set_cookies: true,
     follow_set_referer: true,
     compressed: true,
     timeout: 30 * 1000,
@@ -99,9 +104,11 @@ var Parser = function(opts) {
     this.libxml = libxml;
     this.needle = needle;
     var mem = process.memoryUsage();
+    this.pausedInstances = [];
     this.lastram = mem.rss;
     this.lastStack = 0;
     this.stack = 0;
+    this.instanceStack = [];
     this.opts = extend(opts, default_opts, false);
     this.needle.defaults(this.opts);
     this.requestCount = 0;
@@ -113,16 +120,18 @@ var Parser = function(opts) {
 }
 
 Parser.prototype.parse = function(data) {
-    if (data.substr(0,2) === '<?')
-        return libxml.parseXml(data);
-    else
+    // We don't use parseXml in order to avoid libxml namespaces
+    //if (data.substr(0,2) === '<?')
+    //    return libxml.parseXml(data);
+    //else
         return libxml.parseHtml(data);
 }
 
-Parser.prototype.request = function(depth, method, url, params, cb, opts) {
+Parser.prototype.request = function(instance, depth, method, url, params, cb, opts) {
     opts = opts||{};
     this.stack++;
-    this.queue[depth||0].push([opts.tries||this.opts.tries, method, url, params, cb, opts]);
+    this.instanceStack[instance]++;
+    this.queue[depth||0].push([instance, opts.tries||this.opts.tries, method, url, params, cb, opts]);
     this.requestQueue();
 }
 
@@ -132,6 +141,7 @@ Parser.prototype.requestQueue = function() {
         var arr = this.nextQueue();
         if (arr === false)
             return;
+        var instance = arr.shift();
         var tries = arr.shift()-1;
         var method = arr.shift();
         var url = arr.shift();
@@ -139,6 +149,9 @@ Parser.prototype.requestQueue = function() {
         var cb = arr.shift();
         var opts = arr.shift()||{};
 	opts.cookies = parser.opts.cookies;
+	
+	if (url.charAt(0) === '/' && url.charAt(1) === '/')
+	    url = 'http:'+url;
         self.requests++;
         self.requestCount++;
 	needle.request(method, url, params, opts, function(err, res, data) {
@@ -147,12 +160,12 @@ Parser.prototype.requestQueue = function() {
 		if (err !== null)
 		    throw(err);
 		if (opts.parse !== false) {
-		    if (!res.socket._httpMessage._hasBody || data.length == 0)
+		    if (res.socket._httpMessage._hasBody === false || data.length == 0)
 			throw(new Error('Document is empty'))
 		    var document = null;
-		    if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
-			document = libxml.parseXml(data);
-		    else
+		    if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1) {
+			document = libxml.parseXml(data.toString().replace(/ ?xmlns=['"][^'"]*./g, ''));
+		    }else
 			document = libxml.parseHtml(data);
 		    if (document.errors[0] !== undefined && document.errors[0].code === 4)
 			    throw(new Error('Document is empty'))
@@ -164,6 +177,7 @@ Parser.prototype.requestQueue = function() {
 			headers: res.req._headers
 		    }
 		    document.response = {
+			statusCode: res.statusCode,
 			size: {
 			    total: res.socket.bytesRead,
 			    headers: res.socket.bytesRead-data.length,
@@ -194,7 +208,8 @@ Parser.prototype.requestQueue = function() {
 	    }catch(err) {
 		if (tries > 0) {
 		    parser.stack++;
-		    self.queue[self.queue.length-1].push([tries, method, url, params, cb])
+		    parser.instanceStack[instance]++;
+		    self.queue[self.queue.length-1].push([instance, tries, method, url, params, cb, opts])
 		}
 		err.message += '\n['+method+'] '+url+' tries: '+(self.opts.tries-tries)+' - '+err.message;
 		if (cb.length > 1)
@@ -207,17 +222,35 @@ Parser.prototype.requestQueue = function() {
 }
 
 Parser.prototype.nextQueue = function() {
+    if (this.pausedInstances[0] === true) return false;
     for (var i = this.queue.length;i--;) {
-        if (this.queue[i].length !== 0) {
-            return this.queue[i].pop();
+        for (var c = this.queue[i].length;c--;) {
+	    if (this.pausedInstances.length === 0 || this.pausedInstances.indexOf(this.queue[i][c][0]) === -1)
+		return this.queue[i].splice(c, 1)[0];
         }
     }
     return false;
 }
 
+Parser.prototype.stopInstance = function(instance) {
+    for (var i = this.queue.length;i--;) {
+	if (instance === true) {
+	    parser.stack -= this.queue[i].length;
+	    this.queue[i] = [];
+	}else{
+	    for (var c = this.queue[i].length;c--;) {
+		if (this.queue[i][c][0] === instance) {
+		    parser.stack--;
+		    this.queue[i].splice(c, 1);
+		}
+	    }
+	}
+    }
+}
+
 Parser.prototype.resources = function() {
     var c = this.stack+this.requestCount;
-    if (this.stack !== 0 && (this.stack <= 3 || Math.abs(this.lastStack-c) < 15)) return;
+    if (this.stack !== 0 && (this.stack <= 3 || Math.abs(this.lastStack-c) < parser.opts.processStatsThreshold)) return;
     var mem = process.memoryUsage();
     var memDiff = toMB(mem.rss-this.lastram);
     if (memDiff.charAt(0) !== '-')
