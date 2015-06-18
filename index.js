@@ -147,8 +147,9 @@ Parser.prototype.requestQueue = function() {
         var url = arr.shift();
         var params = arr.shift();
         var cb = arr.shift();
-        var opts = arr.shift()||{};
-	opts.cookies = parser.opts.cookies;
+        var opts = extend(arr.shift()||{}, parser.opts, false);
+	if (parser.opts.cookies !== undefined)
+	    opts.cookies = parser.opts.cookies;
 	
 	if (url.charAt(0) === '/' && url.charAt(1) === '/')
 	    url = 'http:'+url;
@@ -160,7 +161,7 @@ Parser.prototype.requestQueue = function() {
 		if (err !== null)
 		    throw(err);
 		if (opts.parse !== false) {
-		    if (res.socket._httpMessage._hasBody === false || data.length == 0)
+		    if (data.length == 0)
 			throw(new Error('Document is empty'))
 		    var document = null;
 		    if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1) {
@@ -169,21 +170,23 @@ Parser.prototype.requestQueue = function() {
 			document = libxml.parseHtml(data);
 		    if (document.errors[0] !== undefined && document.errors[0].code === 4)
 			    throw(new Error('Document is empty'))
-		    document.request = {
-			url: url,
-			path: res.socket._httpMessage.path,
-			method: method,
-			params: params,
-			headers: res.req._headers
-		    }
-		    document.response = {
-			statusCode: res.statusCode,
-			size: {
-			    total: res.socket.bytesRead,
-			    headers: res.socket.bytesRead-data.length,
-			    body: data.length,
-			},
-			headers: res.headers
+		    if (res.socket !== undefined) {
+			document.request = {
+			    url: url,
+			    path: res.socket._httpMessage.path,
+			    method: method,
+			    params: params,
+			    headers: res.req._headers
+			}
+			document.response = {
+			    statusCode: res.statusCode,
+			    size: {
+				total: res.socket.bytesRead,
+				headers: res.socket.bytesRead-data.length,
+				body: data.length,
+			    },
+			    headers: res.headers
+			}
 		    }
 		    if (res.cookies !== undefined) {
 			parser.p.config('cookies', res.cookies);
