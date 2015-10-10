@@ -60,3 +60,8 @@ For documentation and examples check out [https://github.com/rc0x03/node-osmosis
 
 - [libxmljs](https://github.com/polotek/libxmljs) - libxml C bindings
 - [needle](https://github.com/tomas/needle) - Lightweight HTTP wrapper
+
+##Donate
+Donations will accelerate development and improve the quality and stability of this project.
+
+[![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?item_name=node-osmosis&cmd=_donations&business=NAXMWBMWKUWUU)
