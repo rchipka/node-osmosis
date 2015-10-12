@@ -96,7 +96,8 @@ var default_opts = {
     accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     user_agent: 'Mozilla/5.0 (Windows NT x.y; rv:10.0) Gecko/20100101 Firefox/10.0',
     concurrency: 5,
-    tries: 3
+    tries: 3,
+    post_process: function(d) { return d; },
 }
 
 var Parser = function(opts) {
@@ -164,6 +165,7 @@ Parser.prototype.requestQueue = function() {
 		    if (data.length == 0)
 			throw(new Error('Document is empty'))
 		    var document = null;
+		    data = self.opts['post_process'](data);
 		    if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1) {
 			document = libxml.parseXml(data.toString().replace(/ ?xmlns=['"][^'"]*./g, ''));
 		    }else
