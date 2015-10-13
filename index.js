@@ -8,7 +8,7 @@ var css2xpath   = require('./lib/css2xpath.js');
 /*
  *
  * libxml overrides:
- * 
+ *
  */
 
 /*
@@ -150,7 +150,7 @@ Parser.prototype.requestQueue = function() {
         var opts = extend(arr.shift()||{}, parser.opts, false);
 	if (parser.opts.cookies !== undefined)
 	    opts.cookies = parser.opts.cookies;
-	
+
 	if (url.charAt(0) === '/' && url.charAt(1) === '/')
 	    url = 'http:'+url;
         self.requests++;
@@ -279,3 +279,10 @@ var parser = new Parser();
 var Promise = require('./lib/promise.js')(parser);
 parser.p = new Promise();
 module.exports = parser.p;
+
+module.exports.new = function() {
+    var parser = new Parser();
+    var Promise = require('./lib/promise.js')(parser);
+    parser.p = new Promise();
+    return parser.p;
+};
