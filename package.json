@@ -1,14 +1,14 @@
 {
     "name": "osmosis",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "description": "Web scraper for NodeJS",
     "keywords": [
         "web",
         "scraper",
-	"crawler",
-	"html",
-	"xml",
-	"parser"
+    	"crawler",
+    	"html",
+    	"xml",
+    	"parser"
     ],
     "repository": {
         "type": "git",
@@ -20,7 +20,10 @@
     },
     "dependencies": {
         "needle": ">=0.9.2",
-        "libxmljs": ">=0.14.0"
+        "libxmljs-dom": "https://github.com/rc0x03/libxmljs-dom.git"
+    },
+    "scripts": {
+        "test": "node ./node_modules/.bin/nodeunit test"
     },
     "licenses": [
         {
@@ -36,6 +39,6 @@
     "bugs": {
         "url": "https://github.com/rc0x03/node-osmosis/issues"
     },
-    "_id": "node-osmosis@0.0.8",
+    "_id": "node-osmosis@0.0.9",
     "_from": "node-osmosis@"
 }
