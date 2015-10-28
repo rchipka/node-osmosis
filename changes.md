@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.0.1 (next release)
+## 0.1.0 (next release)
 
  * Add `.listen()` for easily creating DOM event listeners
  * Add `.trigger()` for easily triggering DOM events
