@@ -15,44 +15,43 @@
  * Added `process_response` option for processing data before parsing
  * Added test suite
 
-### `click`
+#### `click`
 
  * Added `.click()` for interacting with JS-only content
 
-### `delay`
+#### `delay`
 
  * Added `.delay(n)` for waiting n seconds before calling next
 
-### `find`
+#### `find`
 
  * Accepts an array of selectors as the first argument
 
-### `follow`
+#### `follow`
 
  * Accepts second argument. Boolean (true = follow external links) or a URL rewriting function.
 
-### `get`
+#### `get`
 
  * Accepts `function(context, data)` as the first argument. The function must return a URL string.
 
-### `parse`
+#### `parse`
 
  * Added second argument to associate a base-url to the document
 
-### `then`
+#### `then`
 
  * Added optional `done` argument
 
-### `select`
+#### `select`
 
  * Added `.select` for finding elements within the current context
 
-### `set`
+#### `set`
 
  * Replaces previously set values
 
-
-#### Internal changes:
+### Internal changes:
 
  * Enhanced stack counting
  * Added data object ref counting
@@ -68,42 +67,42 @@
 
 ## 0.0.8
 
-### `config`
+#### `config`
 
  * Ensure non-default `needle` options propagate
 
 ## 0.0.7
 
-### `paginate`
+#### `paginate`
 
  * Added a more intuitive method for pagination
 
-### `submit`
+#### `submit`
 
  * Added easy form submission
 
-### `login`
+#### `login`
 
  * Added easy login support
 
-### `pause`, `resume`, `stop`
+#### `pause`, `resume`, `stop`
 
  * Added pause, resume, and stop functionality
 
-### `find`
+#### `find`
 
  * Searches the entire document by default
 
-### `set`
+#### `set`
 
  * Supports innerHTML using `:html` or `:source` in selectors
  * Supports deep JSON structures and nested Osmosis instances
 
-### `data`
+#### `data`
 
  * `.data(null)` clears the data object
  * `.data({})` appends keys to data object
 
-### `dom`
+#### `dom`
 
  * `.dom()` is continuing progress and can now run jQuery

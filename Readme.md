@@ -1,5 +1,7 @@
 #Osmosis
 
+[![Build Status](https://travis-ci.org/rc0x03/node-osmosis.svg)](https://travis-ci.org/rc0x03/node-osmosis)
+
 HTML/XML parser and web scraper for NodeJS.
 
 ##Features

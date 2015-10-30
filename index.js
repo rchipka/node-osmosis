@@ -69,10 +69,8 @@ libxml.Element.prototype.content = function() {
     return undefined;
 }
 
-var id = 0;
 var Parser = function(promise) {
     var self = this;
-    this.id = id++;
     this.promise = promise;
     this.requests = 0;
     this.queue = [];
