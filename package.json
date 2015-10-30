@@ -20,7 +20,7 @@
     },
     "dependencies": {
         "needle": ">=0.9.2",
-        "libxmljs-dom": "https://github.com/rc0x03/libxmljs-dom.git"
+        "libxmljs-dom": "https://github.com/rc0x03/node-libxmljs-dom.git"
     },
     "scripts": {
         "test": "node ./node_modules/.bin/nodeunit test"
