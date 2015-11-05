@@ -74,6 +74,7 @@ var Parser = function(promise) {
     this.promise = promise;
     this.requests = 0;
     this.queue = [];
+    this.resumeQueue = [];
     this.cookies = {};
     this.paused = false;
     this.stack = {
@@ -96,14 +97,6 @@ var Parser = function(promise) {
 
 }
 
-Parser.prototype.config = function(opts) {
-    opts = opts || {};
-    for (var key in opts) {
-        this.opts[key] = opts[key];
-    }
-}
-
-
 Parser.prototype.opts = {
     processStatsThreshold: 50, // print process stats after +-15 megabytes or requests
     parse_response: false,
@@ -121,6 +114,23 @@ Parser.prototype.opts = {
     tries: 3
 }
 
+Parser.prototype.resume = function(arg) {
+    if (typeof arg === 'function') {
+        this.resumeQueue.push(arg);
+    }else{
+        this.resumeQueue.forEach(function(cb) {
+            cb();
+        })
+    }
+}
+
+Parser.prototype.config = function(opts) {
+    opts = opts || {};
+    for (var key in opts) {
+        this.opts[key] = opts[key];
+    }
+}
+
 Parser.prototype.parse = function(data) {
     // We don't use parseXml in order to avoid libxml namespaces
     return libxml.parseHtml(data);
@@ -128,7 +138,6 @@ Parser.prototype.parse = function(data) {
 
 Parser.prototype.request = function(method, url, params, cb, opts) {
     opts = opts || {};
-    this.stack.push();
     this.queue.push([opts.tries || this.opts.tries, method, url, params, cb, opts]);
     this.requestQueue();
 }
@@ -171,6 +180,7 @@ Parser.prototype.requestQueue = function() {
 
         self.requests++;
         self.stack.requests++;
+        self.stack.push();
         needle.request(method, url, params, opts, function(err, res, data) {
             self.stack.requests--;
             var document = null;

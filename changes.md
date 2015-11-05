@@ -6,7 +6,12 @@
  * Add `.trigger()` for easily triggering DOM events
  * Add `.do()` to call one or more command using the current context
  * Add `.save()` to save response data to a file
+ * Add `.is()`, `.contains()`, `.match()` for command chain logic?
  * Switch to semantic versioning?
+
+#### `get`
+
+ * Accepts a URL string using "%{dataKey}" to access `data` and "${selector}" to access `context`.
 
 ## 0.0.9 (current release)
 
@@ -21,7 +26,7 @@
 
 #### `delay`
 
- * Added `.delay(n)` for waiting n seconds before calling next
+ * Added `.delay(n)` for waiting n seconds before calling next. Accepts a decimal value.
 
 #### `find`
 
