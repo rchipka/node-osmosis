@@ -1,19 +1,73 @@
 # Changelog
 
-## 0.1.0 (next release)
+## 0.1.1 (next release)
+
+#### TODO:
 
  * Add `.listen()` for easily creating DOM event listeners
  * Add `.trigger()` for easily triggering DOM events
- * Add `.do()` to call one or more command using the current context
+ * Add `.on()` for binding callback to a local-only event
+ * Add `.url()` to set the current URL
+ * Add `.params()` to set the current URL parameters
  * Add `.save()` to save response data to a file
- * Add `.is()`, `.contains()`, `.match()` for command chain logic?
+ * Add `.add()`, `.remove()` for node creation/deletion?
+ * Add libxml specific memoryUsage
  * Switch to semantic versioning?
+
+
+## 0.1.0 (current release)
+
+ * Added `ignore_http_errors` option
+ * Added `:internal` for selecting internal links
+ * Added `:external` for selecting external links
+ * Added `:domain` for searching by domain name
+ * Added `:path` for searching by path
+
+#### `config`
+
+ * Configuration options are inherited down the chain
+
+#### `contains`
+
+ * Added `.contains(string)` to discard nodes whose contents do not match `string`
+
+#### `do`
+
+ * Added `.do()` to call one or more commands using the current context
+
+#### `failure` (or `fail`)
+
+ * Added `.failure(selector)` to discard nodes that match the given selector
+
+#### `filter` (or `success`)
+
+ * Added `.filter(selector)` to discard nodes that do not match the given selector
 
 #### `get`
 
- * Accepts a URL string using "%{dataKey}" to access `data` and "${selector}" to access `context`.
+ * Accepts a tokenized URL string
+    * @{...} - Request info (url, method, params, headers, etc.)
+    * %{...} - `data` object
+    * ${...} - `context` search
 
-## 0.0.9 (current release)
+#### `headers` (or `header`)
+
+* Added `headers(object)` and `header(key, value)` to set HTTP headers
+
+#### `match`
+
+ * Added `.match([selector], RegExp)` to discard nodes whose contents do not match
+
+#### `rewrite`
+
+ * Added `.rewrite(callback)` to set a URL rewriting function for the preceding request
+
+### Internal changes:
+
+ * `promise.args` is now an object (used to be an array)
+ * HTTP 400 errors are now logged and the requests are retried.
+
+## 0.0.9
 
  * DOM and css2xpath functionality have been moved to `libxmljs-dom`
  * Added `keep_data` option to retain the original HTTP response

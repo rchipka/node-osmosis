@@ -19,6 +19,7 @@ module.exports.href = function(assert) {
     })
 }
 
+
 module.exports.delay = function(assert) {
     var count = 0;
     osmosis.get(url)
@@ -35,10 +36,27 @@ module.exports.delay = function(assert) {
     })
 }
 
+/*
+module.exports.not_found = function(assert) {
+    var count = 0;
+    osmosis.get(url)
+    .follow('a@href', false, function(url) {
+        return '/404'
+    })
+    .then(function(context, data) {
+        count++;
+    })
+    .done(function() {
+        assert.ok(count == 5);
+        assert.done();
+    })
+}
+*/
+
 module.exports.internal = function(assert) {
     var count = 0;
     osmosis.get(url)
-    .follow('li > a', false)
+    .follow('li > a:internal')
     .then(function(context, data) {
         count++;
         assert.ok(context.request.params.page == context.get('div').text());
@@ -87,5 +105,12 @@ server('/', function(url, req, res, data) {
         res.write('<li><a href="https://www.google.com/"></a></li>');
         res.write('</ul>')
     }
+    res.end();
+})
+
+
+server('/404', function(url, req, res, data) {
+    res.writeHead(404, {"Content-Type": "text/html"});
+    res.write('<body></body>')
     res.end();
 })

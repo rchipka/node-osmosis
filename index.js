@@ -94,7 +94,7 @@ var Parser = function(promise) {
             return stack.count;
         }
     }
-
+    module.exports.opts = this.opts;
 }
 
 Parser.prototype.opts = {
@@ -137,8 +137,7 @@ Parser.prototype.parse = function(data) {
 }
 
 Parser.prototype.request = function(method, url, params, cb, opts) {
-    opts = opts || {};
-    this.queue.push([opts.tries || this.opts.tries, method, url, params, cb, opts]);
+    this.queue.push([opts.tries || opts.tries, method, url, params, cb, opts]);
     this.requestQueue();
 }
 
@@ -153,7 +152,7 @@ Parser.prototype.requestQueue = function() {
         var url         = arr.shift();
         var params      = arr.shift();
         var cb          = arr.shift();
-        var opts        = extend(arr.shift() || {}, this.opts, false);
+        var opts        = arr.shift();
 
         if (url.charAt(0) === '/' && url.charAt(1) === '/')
             url = 'http:' + url;
@@ -186,12 +185,14 @@ Parser.prototype.requestQueue = function() {
             var document = null;
             if (opts.process_response !== undefined)
                 data = opts.process_response(data);
+            if (res.statusCode >= 400 && res.statusCode < 500 && opts.ignore_http_errors !== true)
+                err = res.statusCode+' '+res.statusMessage;
             if (opts.parse !== false) {
                 if (err) {
                 }else if (data.length == 0)
                     err = 'Document is empty';
-                else if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
-                    document = libxml.parseXml(data.toString().replace(/ ?xmlns=['"][^'"]*./g, ''));
+                //else if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
+                //    document = libxml.parseXml(data.toString().replace(/ ?xmlns=['"][^'"]*./g, ''));
                 else
                     document = libxml.parseHtml(data);
                 if (document !== null) {
@@ -207,7 +208,9 @@ Parser.prototype.requestQueue = function() {
                             headers: res.req._headers
                         }
                         document.response = {
+                            type: (res.headers['content-type']||'').indexOf('xml')!==-1?'xml':'html',
                             statusCode: res.statusCode,
+                            statusMessage: res.statusMessage,
                             size: {
                                 total: res.socket.bytesRead,
                                 headers: res.socket.bytesRead - data.length,
@@ -224,6 +227,7 @@ Parser.prototype.requestQueue = function() {
                         else
                             extend(self.cookies[host], res.cookies);
                     }
+                    document.root().namespace(url);
                 }
             }else{
                 document = data;
@@ -232,9 +236,10 @@ Parser.prototype.requestQueue = function() {
                 if (tries > 0) {
                     self.stack.push();
                     self.queue.push([tries, method, url, params, cb, opts])
+                    self.promise.log(url+' - tries: '+(self.opts.tries-(tries-1))+'/'+self.opts.tries+'')
                 }
-                err.message += '\n[' + method + '] ' + url + ' tries: ' + (self.opts.tries - tries) + ' - ' + err.message;
-                self.promise.log(err);
+                if (err.message !== undefined)
+                    err = err.message;
             }
             cb(err, res, document);
             self.requestQueue();
@@ -269,3 +274,16 @@ function extend(obj1, obj2, replace) {
 
 var Promise = require('./lib/promise.js')(Parser);
 module.exports = new Promise;
+module.exports.config = function(key, val) {
+    var opts = Parser.prototype.opts;
+    if (key === undefined)
+        return opts;
+    if (typeof key === 'object') {
+        extend(opts, key, true);
+    }else if (typeof key === 'function') {
+        key(opts);
+    }else{
+        opts[key] = val;
+    }
+    return this;
+}
