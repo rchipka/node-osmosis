@@ -1,10 +1,10 @@
 #Osmosis
 
+HTML/XML parser and web scraper for NodeJS.
+
 [![NPM](https://nodei.co/npm/osmosis.png)](https://www.npmjs.com/package/osmosis)
 
 [![Build Status](https://travis-ci.org/rc0x03/node-osmosis.svg)](https://travis-ci.org/rc0x03/node-osmosis)
-
-HTML/XML parser and web scraper for NodeJS.
 
 ##Features
 
