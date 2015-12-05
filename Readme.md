@@ -1,5 +1,7 @@
 #Osmosis
 
+[![NPM](https://nodei.co/npm/osmosis.png)](https://www.npmjs.com/package/osmosis)
+
 [![Build Status](https://travis-ci.org/rc0x03/node-osmosis.svg)](https://travis-ci.org/rc0x03/node-osmosis)
 
 HTML/XML parser and web scraper for NodeJS.
@@ -42,12 +44,6 @@ osmosis
 .log(console.log)
 .error(console.log)
 .debug(console.log)
-```
-
-##Install
-
-```
-npm install osmosis
 ```
 
 ##Documentation
