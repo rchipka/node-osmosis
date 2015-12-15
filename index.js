@@ -1,6 +1,7 @@
 var needle = require('needle');
 var libxml = require('libxmljs-dom');
 var URL    = require('url');
+var qs     = require('querystring');
 
 /*
  *
@@ -81,21 +82,21 @@ var Parser = function(promise) {
         requests: 0,
         change: 0,
         push: function() {
-            this.change++;
+            if (++this.change >= self.opts.processStatsThreshold) {
+                self.resources();
+                this.change = 0;
+            }
             return ++this.count;
         },
         pop: function() {
             var stack = this;
             process.nextTick(function() {
-                stack.change++;
                 if (--stack.count === 0) {
                     promise.done();
                     self.resources();
-                }else if (stack.change >= self.opts.processStatsThreshold) {
-                    self.resources();
-                    stack.change = 0;
                 }
             })
+            stack.change++;
             return stack.count;
         }
     }
@@ -161,21 +162,20 @@ Parser.prototype.requestQueue = function() {
 
         if (url.charAt(0) === '/' && url.charAt(1) === '/')
             url = 'http:' + url;
-        else if (url.indexOf('http') !== 0)
+        else if (url.substr(0, 4) !== 'http')
             url = 'http://' + url;
 
         url = URL.parse(url, true);
+
+        url.params = params;
         if (method.charAt(0) === 'g') {
-            url.search = '';
             for (var key in params) {
                 url.query[key] = params[key];
             }
-            params = url.query;
+            url.params = url.query;
+            url.search = qs.stringify(url.query);
+            params = undefined;
         }
-        var host = url.hostname;
-        var query = url.query;
-        var search = url.search;
-        url = URL.format(url);
 
         if (Array.isArray(opts.proxy))
             opts.proxies = opts.proxy;
@@ -185,16 +185,25 @@ Parser.prototype.requestQueue = function() {
                 proxies.index = 0;
             opts.proxy = proxies[proxies.index];
         }
+
         self.requests++;
         self.stack.requests++;
         self.stack.push();
-        needle.request(method, url, params, opts, function(err, res, data) {
+        needle.request(method, URL.format(url), params, opts, function(err, res, data) {
             self.stack.requests--;
             var document = null;
+
             if (opts.process_response !== undefined)
                 data = opts.process_response(data);
+
             if (err === null && res.statusCode >= 400 && res.statusCode < 500 && opts.ignore_http_errors !== true)
                 err = res.statusCode+' '+res.statusMessage;
+
+            if (err !== null) {
+                if (Array.isArray(opts.proxy) && opts.proxy.length > 1)
+                    opts.proxy.splice(opts.proxy.index, 1);
+            }
+
             if (opts.parse !== false) {
                 if (err) {
                 }else if (data === null || data.length == 0) {
@@ -203,46 +212,51 @@ Parser.prototype.requestQueue = function() {
                 //else if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
                 //    document = libxml.parseXml(data.toString().replace(/ ?xmlns=['"][^'"]*./g, ''));
                 }else
-                    document = libxml.parseHtml(data, { baseUrl: url });
+                    document = libxml.parseHtml(data, { baseUrl: url.href });
                 if (document !== null) {
-                    if (document.errors[0] !== undefined && document.errors[0].code === 4)
+                    if (document.errors[0] !== undefined && document.errors[0].code === 4) {
                         err = 'Document is empty';
-                    if (res.socket !== undefined) {
-                        document.request = {
-                            url: url,
-                            host: host,
-                            path: res.socket._httpMessage.path,
-                            method: method,
-                            params: params||{},
-                            query:  query,
-                            search: search,
-                            headers: res.req._headers,
-                            proxy: opts.proxy,
-                        }
+                    }else{
+                        url.url     = url.href;
+                        url.method  = method;
+                        url.headers = res.req._headers;
+                        url.proxy   = opts.proxy;
+                        url.user_agent = opts.user_agent;
+
+                        document.location = url;
+                        document.request = url;
                         document.response = {
                             type: (res.headers['content-type']||'').indexOf('xml')!==-1?'xml':'html',
                             statusCode: res.statusCode,
                             statusMessage: res.statusMessage,
-                            size: {
-                                total: res.socket.bytesRead,
-                                headers: res.socket.bytesRead - data.length,
-                                body: data.length,
-                            },
                             headers: res.headers
                         }
                         if (self.opts.keep_data === true)
                             document.response.data = data;
-                    }
-                    if (opts.cookies === undefined)
-                        opts.cookies = {};
-                    if (res.cookies !== undefined)
-                        extend(opts.cookies, res.cookies);
-                    extend(document.cookies, opts.cookies);
-                    var root = document.root();
-                    if (document.root() !== null)
-                        root.namespace(url); // set namespace to URL for :external/:internal CSS selectors
-                    else
-                        err = 'Document has no root';
+
+                        if (res.socket !== undefined) {
+                            url.path    = res.socket._httpMessage.path.replace(/\?$/, '');
+                            document.response.size = {
+                                total: res.socket.bytesRead,
+                                headers: res.socket.bytesRead - data.length,
+                                body: data.length,
+                            }
+                        }
+
+                        if (opts.cookies === undefined)
+                            opts.cookies = {};
+
+                        if (res.cookies !== undefined)
+                            extend(opts.cookies, res.cookies);
+
+                        extend(document.cookies, opts.cookies);
+
+                        var root = document.root();
+                        if (document.root() !== null)
+                            root.namespace(url.href); // set namespace to URL for :external/:internal CSS selectors
+                        else
+                            err = 'Document has no root';
+                        }
                 }
             }else{
                 document = data;

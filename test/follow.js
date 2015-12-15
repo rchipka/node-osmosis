@@ -70,7 +70,8 @@ module.exports.internal = function(assert) {
 module.exports.rewrite = function(assert) {
     var count = 0;
     osmosis.get(url)
-    .follow('a', function(url) {
+    .follow('a:internal')
+    .rewrite(function(url) {
         return '/?page=1';
     })
     .then(function(context, data) {

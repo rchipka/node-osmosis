@@ -12,7 +12,7 @@ module.exports.link = function(assert) {
     .then(function(context, data) {
         var page = context.request.params.page||1;
         assert.ok(page == data.page)
-        count++;
+        assert.ok(page == ++count)
     })
     .done(function() {
         assert.ok(count > 1);
@@ -28,7 +28,7 @@ module.exports.param = function(assert) {
     .then(function(context, data) {
         var page = context.request.params.page||1;
         assert.ok(page == data.page)
-        count++;
+        assert.ok(page == ++count)
     })
     .done(function() {
         assert.ok(count > 1);
@@ -44,7 +44,7 @@ module.exports.form = function(assert) {
     .then(function(context, data) {
         var page = context.request.params.page||1;
         assert.ok(page == data.page)
-        count++;
+        assert.ok(page == ++count)
     })
     .done(function() {
         assert.ok(count > 1);
