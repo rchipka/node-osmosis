@@ -4,7 +4,6 @@ var URL = require('url');
 
 var url = server.host+':'+server.port;
 
-/*
 module.exports.ajax = function(assert) {
     osmosis.get(url)
     .click('.ajax')
@@ -25,7 +24,7 @@ module.exports.script = function(assert) {
     .done(function() {
         assert.done();
     })
-};*/
+};
 
 server('/', function(url, req, res, data) {
     res.setHeader("Content-Type", "text/html");
