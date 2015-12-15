@@ -1,3 +1,4 @@
+'use strict';
 var needle = require('needle');
 var libxml = require('libxmljs-dom');
 var URL    = require('url');
@@ -249,6 +250,8 @@ Parser.prototype.requestQueue = function() {
                         if (res.cookies !== undefined)
                             extend(opts.cookies, res.cookies);
 
+                        if (document.cookies === undefined)
+                            document.cookies = {};
                         extend(document.cookies, opts.cookies);
 
                         var root = document.root();
