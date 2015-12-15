@@ -13,11 +13,11 @@
  * Add `.save()` to save response data to a file
  * Add `.add()`, `.remove()` for node creation/deletion?
  * Add proxy rotation via callback or array (round robin, delete if one fails)
- * Add libxml specific memoryUsage
  * Parse error warnings
  * Add XML_PARSE_HUGE option
  * Make `.then()` preloader automatically check if arg[0] name is window, $, or context (default)
  * Switch to semantic versioning?
+ * Added libxml specific memoryUsage
 
 
 ## 0.1.0 (current release)
