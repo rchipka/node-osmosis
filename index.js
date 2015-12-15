@@ -8,15 +8,14 @@ var URL    = require('url');
  *
  */
 
-libxml.Document.prototype.dom = function(instance, opts, cb, requestsDone) {
+libxml.Document.prototype.dom = function(promise, opts, cb, requestsDone) {
     if (this.doc().__window !== undefined) {
         if (cb !== undefined) cb(this.doc().__window);
         return this.doc().__window;
     }
     return new libxml.Window(this, function(method, url, data, cb, opts) {
-        instance.request(method, url, data, function(err, doc, data) {
+        promise.request(method, url, data, function(err, doc, data) {
             cb(err, doc, data);
-            instance.stack.pop();
         }, opts)
     }, opts, cb);
 }
@@ -49,7 +48,6 @@ libxml.Element.prototype.find = function(sel) {
         return this.findXPath(sel);
     }else if (cachedSelectors[sel] === undefined) {
         cachedSelectors[sel] = libxml.css2xpath(sel);
-        //console.log(cachedSelectors[sel])
     }
     return this.findXPath(cachedSelectors[sel]) || [];
 }
@@ -72,23 +70,30 @@ libxml.Element.prototype.content = function() {
 var Parser = function(promise) {
     var self = this;
     this.promise = promise;
+    this.doneCount = 0;
     this.requests = 0;
     this.queue = [];
     this.resumeQueue = [];
-    this.cookies = {};
     this.paused = false;
+    this.stopped = false;
     this.stack = {
         count: 0,
         requests: 0,
+        change: 0,
         push: function() {
+            this.change++;
             return ++this.count;
         },
         pop: function() {
             var stack = this;
             process.nextTick(function() {
+                stack.change++;
                 if (--stack.count === 0) {
                     promise.done();
                     self.resources();
+                }else if (stack.change >= self.opts.processStatsThreshold) {
+                    self.resources();
+                    stack.change = 0;
                 }
             })
             return stack.count;
@@ -98,9 +103,9 @@ var Parser = function(promise) {
 }
 
 Parser.prototype.opts = {
-    processStatsThreshold: 50, // print process stats after +-15 megabytes or requests
+    processStatsThreshold: 25,
     parse_response: false,
-    decode: true,
+    decode_response: true,
     follow: 3,
     follow_set_cookies: true,
     follow_set_referer: true,
@@ -131,13 +136,13 @@ Parser.prototype.config = function(opts) {
     }
 }
 
-Parser.prototype.parse = function(data) {
+Parser.prototype.parse = function(data, opts) {
     // We don't use parseXml in order to avoid libxml namespaces
-    return libxml.parseHtml(data);
+    return libxml.parseHtml(data, opts);
 }
 
 Parser.prototype.request = function(method, url, params, cb, opts) {
-    this.queue.push([opts.tries || opts.tries, method, url, params, cb, opts]);
+    this.queue.push([opts.tries, method, url, params, cb, opts]);
     this.requestQueue();
 }
 
@@ -169,14 +174,17 @@ Parser.prototype.requestQueue = function() {
         }
         var host = url.hostname;
         var query = url.query;
+        var search = url.search;
         url = URL.format(url);
 
-        if (self.cookies[host] !== undefined) {
-            if (opts.cookies === undefined)
-                opts.cookies = {};
-            extend(opts.cookies, self.cookies[host])
+        if (Array.isArray(opts.proxy))
+            opts.proxies = opts.proxy;
+        if (opts.proxies !== undefined) {
+            var proxies = opts.proxies;
+            if (proxies.index === undefined || ++proxies.index >= proxies.length)
+                proxies.index = 0;
+            opts.proxy = proxies[proxies.index];
         }
-
         self.requests++;
         self.stack.requests++;
         self.stack.push();
@@ -185,27 +193,31 @@ Parser.prototype.requestQueue = function() {
             var document = null;
             if (opts.process_response !== undefined)
                 data = opts.process_response(data);
-            if (res.statusCode >= 400 && res.statusCode < 500 && opts.ignore_http_errors !== true)
+            if (err === null && res.statusCode >= 400 && res.statusCode < 500 && opts.ignore_http_errors !== true)
                 err = res.statusCode+' '+res.statusMessage;
             if (opts.parse !== false) {
                 if (err) {
-                }else if (data.length == 0)
-                    err = 'Document is empty';
+                }else if (data === null || data.length == 0) {
+                    if (method !== 'head')
+                        err = 'Data is empty';
                 //else if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
                 //    document = libxml.parseXml(data.toString().replace(/ ?xmlns=['"][^'"]*./g, ''));
-                else
-                    document = libxml.parseHtml(data);
+                }else
+                    document = libxml.parseHtml(data, { baseUrl: url });
                 if (document !== null) {
                     if (document.errors[0] !== undefined && document.errors[0].code === 4)
                         err = 'Document is empty';
                     if (res.socket !== undefined) {
                         document.request = {
                             url: url,
+                            host: host,
                             path: res.socket._httpMessage.path,
                             method: method,
                             params: params||{},
                             query:  query,
-                            headers: res.req._headers
+                            search: search,
+                            headers: res.req._headers,
+                            proxy: opts.proxy,
                         }
                         document.response = {
                             type: (res.headers['content-type']||'').indexOf('xml')!==-1?'xml':'html',
@@ -221,47 +233,58 @@ Parser.prototype.requestQueue = function() {
                         if (self.opts.keep_data === true)
                             document.response.data = data;
                     }
-                    if (res.cookies !== undefined) {
-                        if (self.cookies[host] === undefined)
-                            self.cookies[host] = res.cookies;
-                        else
-                            extend(self.cookies[host], res.cookies);
-                    }
-                    document.root().namespace(url);
+                    if (opts.cookies === undefined)
+                        opts.cookies = {};
+                    if (res.cookies !== undefined)
+                        extend(opts.cookies, res.cookies);
+                    extend(document.cookies, opts.cookies);
+                    var root = document.root();
+                    if (document.root() !== null)
+                        root.namespace(url); // set namespace to URL for :external/:internal CSS selectors
+                    else
+                        err = 'Document has no root';
                 }
             }else{
                 document = data;
             }
             if (err) {
+                if (err.message !== undefined)
+                    err = err.message;
                 if (tries > 0) {
+                    err += ', trying again';
                     self.stack.push();
                     self.queue.push([tries, method, url, params, cb, opts])
                     self.promise.log(url+' - tries: '+(self.opts.tries-(tries-1))+'/'+self.opts.tries+'')
                 }
-                if (err.message !== undefined)
-                    err = err.message;
             }
             cb(err, res, document);
             self.requestQueue();
-            self.resources();
         });
     }
 }
 
 var prevMem = 0;
 Parser.prototype.resources = function() {
-    if (this.requests % this.opts.processStatsThreshold === 0) return;
     var mem = process.memoryUsage();
+    var libxml_mem = libxml.memoryUsage();
+    var nodes = libxml.nodeCount();
+    if (nodes >= 1000)
+        nodes = (nodes/1000).toFixed(0)+'k';
     var memDiff = mem.rss - prevMem;
     memDiff = toMB(memDiff);
     if (memDiff.charAt(0) !== '-')
         memDiff = '+' + memDiff;
-    this.promise.debug('(process) stack: ' + this.stack.count + ', RAM: ' + toMB(mem.rss) + ' (' + memDiff + ') requests: ' + this.requests + ', heap: ' + toMB(mem.heapUsed) + ' / ' + toMB(mem.heapTotal));
+    this.promise.debug('(process) stack: ' + this.stack.count +', ' +
+               'requests: ' + this.requests + ' (' + this.stack.requests + ' queued), '+
+
+                        'RAM: ' + toMB(mem.rss) + ' (' + memDiff + '), '+
+                        'libxml: ' + ((libxml_mem/mem.rss)*100).toFixed(1) + '% ('+nodes+ ' nodes), '+
+                        'heap: ' + ((mem.heapUsed/mem.heapTotal)*100).toFixed(0) + '% of ' + toMB(mem.heapTotal));
     prevMem = mem.rss;
 }
 
-function toMB(size) {
-    return (size / 1024 / 1024).toFixed(2) + 'Mb';
+function toMB(size, num) {
+    return (size / 1024 / 1024).toFixed(num||2) + 'Mb';
 }
 
 function extend(obj1, obj2, replace) {

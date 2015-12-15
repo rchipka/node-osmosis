@@ -4,6 +4,7 @@
 
 #### TODO:
 
+ * Add `.learn()` to generate a selector for a selected node
  * Add `.listen()` for easily creating DOM event listeners
  * Add `.trigger()` for easily triggering DOM events
  * Add `.on()` for binding callback to a local-only event
@@ -11,7 +12,11 @@
  * Add `.params()` to set the current URL parameters
  * Add `.save()` to save response data to a file
  * Add `.add()`, `.remove()` for node creation/deletion?
+ * Add proxy rotation via callback or array (round robin, delete if one fails)
  * Add libxml specific memoryUsage
+ * Parse error warnings
+ * Add XML_PARSE_HUGE option
+ * Make `.then()` preloader automatically check if arg[0] name is window, $, or context (default)
  * Switch to semantic versioning?
 
 

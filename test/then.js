@@ -22,7 +22,9 @@ module.exports.three_args = function(assert) {
     count = 0;
     osmosis.parse(html)
     .then(function(context, data, next) {
-        next(context, data);
+        setTimeout(function(last) {
+            next(context, data);
+        }, 200)
     })
     .data(function() {
         count++;
