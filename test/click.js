@@ -13,9 +13,6 @@ module.exports.ajax = function(assert) {
     .done(function() {
         assert.done();
     })
-    .log(console.log)
-    .error(console.log)
-    .debug(console.log)
 }
 
 module.exports.script = function(assert) {

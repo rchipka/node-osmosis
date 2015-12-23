@@ -8,6 +8,7 @@ var user = 'user';
 var pass = 'pass';
 
 module.exports.form = function(assert) {
+    var errors = 0;
     osmosis
     .get(url+'/form')
     .login(user, pass, 'div:contains("authenticated")')
@@ -20,12 +21,17 @@ module.exports.form = function(assert) {
         assert.ok(div !== null)
         assert.ok(div.text() == 'done');
     })
+    .error(function(msg) {
+        errors++;
+    })
     .done(function() {
+        assert.ok(errors === 0);
         assert.done();
     })
 }
 
 module.exports.basic_auth = function(assert) {
+    var errors = 0;
     osmosis
     .config({ username: user, password: pass })
     .get(url+'/basic_auth')
@@ -36,7 +42,11 @@ module.exports.basic_auth = function(assert) {
     .then(function(context, data) {
         assert.ok(context.get('div').text() == 'done');
     })
+    .error(function(msg) {
+        errors++;
+    })
     .done(function() {
+        assert.ok(errors === 0);
         assert.done();
     })
 }
@@ -67,7 +77,7 @@ server('/form', function(url, req, res, data) {
         if (url.query.next && req.headers.cookie == 'auth=true') {
             res.write('<div>done</div>')
         }else{
-            res.write('<body><form method="POST"><input name="user" /><input type="password" name="pass" /></form></body>')
+            res.write('<body><form method="POST"><input name="outer" /><input name="user" /><input name="remember" type="checkbox" /><input type="password" name="pass" /></form></body>')
         }
     }else{
         if (data.user == user && data.pass == pass) {

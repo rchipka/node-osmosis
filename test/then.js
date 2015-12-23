@@ -1,7 +1,6 @@
 var osmosis = require('../index');
-var server = require('./server');
 
-var html = '<body></body>'
+var html = '<body></body>';
 
 module.exports.two_args = function(assert) {
     count = 0;
@@ -16,7 +15,7 @@ module.exports.two_args = function(assert) {
         assert.ok(count == 2);
         assert.done();
     })
-};
+}
 
 module.exports.three_args = function(assert) {
     count = 0;
@@ -33,7 +32,7 @@ module.exports.three_args = function(assert) {
         assert.ok(count == 1);
         assert.done();
     })
-};
+}
 
 
 module.exports.four_args = function(assert) {
@@ -53,8 +52,38 @@ module.exports.four_args = function(assert) {
         count++;
     })
     .done(function() {
-        assert.ok(count == 3);
-        server.close();
         assert.done();
     })
-};
+}
+
+module.exports.document = function(assert) {
+    osmosis.parse(html)
+    .then(function(document, data) {
+        assert.ok(document.documentElement)
+    })
+    .done(function() {
+        assert.done();
+    })
+}
+
+module.exports.window = function(assert) {
+    osmosis.parse(html)
+    .then(function(window, data) {
+        assert.ok(window.window)
+    })
+    .done(function() {
+        assert.done();
+    })
+}
+
+/*
+module.exports.jquery = function(assert) {
+    osmosis.parse(html)
+    .then(function($, data) {
+        assert.ok(typeof $ === "function")
+    })
+    .done(function() {
+        assert.done();
+    })
+}
+*/

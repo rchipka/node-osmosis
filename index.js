@@ -84,7 +84,8 @@ var Parser = function(promise) {
         change: 0,
         push: function() {
             if (++this.change >= self.opts.processStatsThreshold) {
-                self.resources();
+                if (self.opts.debug === true)
+                    self.resources();
                 this.change = 0;
             }
             return ++this.count;
@@ -94,7 +95,8 @@ var Parser = function(promise) {
             process.nextTick(function() {
                 if (--stack.count === 0) {
                     promise.done();
-                    self.resources();
+                    if (self.opts.debug === true)
+                        self.resources();
                 }
             })
             stack.change++;
@@ -125,9 +127,10 @@ Parser.prototype.resume = function(arg) {
     if (typeof arg === 'function') {
         this.resumeQueue.push(arg);
     }else{
-        this.resumeQueue.forEach(function(cb) {
-            cb();
-        })
+        var length = this.resumeQueue.length
+        for (var i = 0; i < length; i++) {
+            this.resumeQueue[i]();
+        }
     }
 }
 
@@ -161,7 +164,7 @@ Parser.prototype.requestQueue = function() {
         var cb          = arr.shift();
         var opts        = arr.shift();
 
-        if (url.charAt(0) === '/' && url.charAt(1) === '/')
+        if (url.substr(0, 1) === '//')
             url = 'http:' + url;
         else if (url.substr(0, 4) !== 'http')
             url = 'http://' + url;
@@ -177,6 +180,7 @@ Parser.prototype.requestQueue = function() {
             url.search = qs.stringify(url.query);
             params = undefined;
         }
+        var href = url.href = URL.format(url);
 
         if (Array.isArray(opts.proxy))
             opts.proxies = opts.proxy;
@@ -190,20 +194,15 @@ Parser.prototype.requestQueue = function() {
         self.requests++;
         self.stack.requests++;
         self.stack.push();
-        needle.request(method, URL.format(url), params, opts, function(err, res, data) {
+        var req = needle.request(method, href, params, opts, function(err, res, data) {
             self.stack.requests--;
             var document = null;
 
             if (opts.process_response !== undefined)
                 data = opts.process_response(data);
 
-            if (err === null && res.statusCode >= 400 && res.statusCode < 500 && opts.ignore_http_errors !== true)
+            if (err === null && res.statusCode >= 400 && res.statusCode <= 500 && opts.ignore_http_errors !== true)
                 err = res.statusCode+' '+res.statusMessage;
-
-            if (err !== null) {
-                if (Array.isArray(opts.proxy) && opts.proxy.length > 1)
-                    opts.proxy.splice(opts.proxy.index, 1);
-            }
 
             if (opts.parse !== false) {
                 if (err) {
@@ -212,13 +211,16 @@ Parser.prototype.requestQueue = function() {
                         err = 'Data is empty';
                 //else if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
                 //    document = libxml.parseXml(data.toString().replace(/ ?xmlns=['"][^'"]*./g, ''));
-                }else
-                    document = libxml.parseHtml(data, { baseUrl: url.href });
+                }else{
+                    document = libxml.parseHtml(data, { baseUrl: href });
+                }
                 if (document !== null) {
                     if (document.errors[0] !== undefined && document.errors[0].code === 4) {
                         err = 'Document is empty';
+                    }else if (document.root() === null) {
+                        err = 'Document has no root';
                     }else{
-                        url.url     = url.href;
+                        url.url     = href;
                         url.method  = method;
                         url.headers = res.req._headers;
                         url.proxy   = opts.proxy;
@@ -253,30 +255,41 @@ Parser.prototype.requestQueue = function() {
                         if (document.cookies === undefined)
                             document.cookies = {};
                         extend(document.cookies, opts.cookies);
-
-                        var root = document.root();
-                        if (document.root() !== null)
-                            root.namespace(url.href); // set namespace to URL for :external/:internal CSS selectors
-                        else
-                            err = 'Document has no root';
-                        }
+                    }
                 }
             }else{
                 document = data;
             }
             if (err) {
+                if (proxies !== undefined && (res === undefined || res.statusCode !== 404)) {
+                    if (self.opts.error === true)
+                        self.promise.error('proxy '+(proxies.index+1)+'/'+proxies.length+' failed ('+opts.proxy+')')
+                    if (Array.isArray(proxies) && proxies.length > 1) {
+                        opts.proxies.splice(proxies.index, 1);
+                        opts.proxy = proxies[proxies.index];
+                    }
+                }
                 if (err.message !== undefined)
                     err = err.message;
                 if (tries > 0) {
                     err += ', trying again';
                     self.stack.push();
-                    self.queue.push([tries, method, url, params, cb, opts])
-                    self.promise.log(url+' - tries: '+(self.opts.tries-(tries-1))+'/'+self.opts.tries+'')
+                    self.queue.push([tries, method, href, params, cb, opts])
+                    if (self.opts.log === true)
+                        self.promise.log(href+' - tries: '+(opts.tries-tries)+'/'+opts.tries+'')
                 }
             }
+            if (res !== undefined)
+                res.url = url;
             cb(err, res, document);
             self.requestQueue();
         });
+
+        req.on('redirect', function(new_url) {
+            if (self.opts.log === true)
+                self.promise.log('[redirect] '+url.href+' -> '+new_url)
+            extend(url, URL.parse(new_url));
+        })
     }
 }
 
@@ -304,12 +317,15 @@ function toMB(size, num) {
     return (size / 1024 / 1024).toFixed(num||2) + 'Mb';
 }
 
-function extend(obj1, obj2, replace) {
-    for (var i in obj2) {
-        if ((replace === false && obj1[i] !== undefined)) continue;
-        obj1[i] = obj2[i];
+var extend = function(object, donor, replace) {
+	var key, keys = Object.keys(donor);
+	var i = keys.length;
+	while (i--) {
+		key = keys[i];
+        if (replace === false && object[key] !== undefined) continue;
+        object[key] = donor[key];
     }
-    return obj1;
+    return object;
 }
 
 var Promise = require('./lib/promise.js')(Parser);

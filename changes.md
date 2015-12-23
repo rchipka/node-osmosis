@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.1 (next release)
+## 0.1.2 (next release)
 
 #### TODO:
 
@@ -12,15 +12,33 @@
  * Add `.params()` to set the current URL parameters
  * Add `.save()` to save response data to a file
  * Add `.add()`, `.remove()` for node creation/deletion?
- * Add proxy rotation via callback or array (round robin, delete if one fails)
- * Parse error warnings
  * Add XML_PARSE_HUGE option
- * Make `.then()` preloader automatically check if arg[0] name is window, $, or context (default)
+ * Add warnings for parser errors?
  * Switch to semantic versioning?
- * Added libxml specific memoryUsage
 
+## 0.1.1 (current release)
 
-## 0.1.0 (current release)
+ * `proxy` option can now be an array of multiple proxies
+
+#### `proxy`
+
+ * Added `.proxy()` to easily set the `proxy` configuration option
+
+#### `then`
+
+ * If the first argument's name is:
+    * "document" - The callback is given the current document
+    * "window" - The callback is given the Window object
+    * "$" - The callback is given a jQuery object (if available)
+
+### Internal changes:
+
+ * Uses 'use strict'
+ * Minimize use of array.forEach
+ * Added libxml specific memoryUsage monitoring
+ * Switched to static `libxmljs-dom` version
+
+## 0.1.0
 
  * Added `ignore_http_errors` option
  * Added `:internal` for selecting internal links

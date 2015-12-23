@@ -10,8 +10,9 @@ module.exports.href = function(assert) {
     osmosis.get(url)
     .follow('li:skip-last > a')
     .then(function(context, data) {
-        count++;
+        assert.ok(context.request.headers.referer);
         assert.ok(context.request.params.page == context.get('div').text());
+        count++;
     })
     .done(function() {
         assert.ok(count == 5);
@@ -28,6 +29,7 @@ module.exports.delay = function(assert) {
     .follow('@href')
     .then(function(context, data) {
         count++;
+        assert.ok(context.request.headers.referer);
         assert.ok(context.request.params.page == context.get('div').text());
     })
     .done(function() {
@@ -59,6 +61,7 @@ module.exports.internal = function(assert) {
     .follow('li > a:internal')
     .then(function(context, data) {
         count++;
+        assert.ok(context.request.headers.referer);
         assert.ok(context.request.params.page == context.get('div').text());
     })
     .done(function() {
@@ -75,6 +78,7 @@ module.exports.rewrite = function(assert) {
         return '/?page=1';
     })
     .then(function(context, data) {
+        assert.ok(context.request.headers.referer);
         assert.ok(1 == context.get('div').text());
     })
     .done(function() {
