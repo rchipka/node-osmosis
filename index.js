@@ -304,7 +304,7 @@ Parser.prototype.resources = function() {
     memDiff = toMB(memDiff);
     if (memDiff.charAt(0) !== '-')
         memDiff = '+' + memDiff;
-    this.promise.debug('(process) stack: ' + this.stack.count +', ' +
+    this.promise.debug('stack: ' + this.stack.count +', ' +
                'requests: ' + this.requests + ' (' + this.stack.requests + ' queued), '+
 
                         'RAM: ' + toMB(mem.rss) + ' (' + memDiff + '), '+

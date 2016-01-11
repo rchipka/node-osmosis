@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.2 (next release)
+## 0.1.3 (next release)
 
 #### TODO:
 
@@ -16,7 +16,11 @@
  * Add warnings for parser errors?
  * Switch to semantic versioning?
 
-## 0.1.1 (current release)
+## 0.1.2 (current release)
+
+ * Update to `libxmljs-dom` v0.0.4
+
+## 0.1.1
 
  * `proxy` option can now be an array of multiple proxies
 
