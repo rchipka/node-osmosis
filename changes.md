@@ -1,7 +1,5 @@
 # Changelog
 
-## 0.1.3 (next release)
-
 #### TODO:
 
  * Add `.learn()` to generate a selector for a selected node
@@ -12,11 +10,29 @@
  * Add `.params()` to set the current URL parameters
  * Add `.save()` to save response data to a file
  * Add `.add()`, `.remove()` for node creation/deletion?
- * Add XML_PARSE_HUGE option
+ * Add `.scroll()` to scrape infinite scroll pages
  * Add warnings for parser errors?
  * Switch to semantic versioning?
 
-## 0.1.2 (current release)
+## 0.1.3
+
+ * parseHtml uses `huge` option by default
+ * Fixed nested Osmosis instances inside `set`
+ * Update to `libxmljs-dom` v0.0.5
+
+#### `set`
+
+ * Fixed nested Osmosis instances inside `set`
+ * Added tests for nested set data
+
+#### `submit`
+
+ * Proper `submit` button handling
+ * Accepts a `submit` button selector as the first argument
+ * Supports `submit` button attributes: "form", "formaction", "formenctype" and "formmethod"
+ * Added tests for `submit` button handling
+
+## 0.1.2
 
  * Update to `libxmljs-dom` v0.0.4
 
@@ -79,7 +95,7 @@
 
 #### `headers` (or `header`)
 
-* Added `headers(object)` and `header(key, value)` to set HTTP headers
+* Added `headers({ key: value })` and `header(key, value)` to set HTTP headers
 
 #### `match`
 

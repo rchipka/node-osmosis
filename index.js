@@ -157,12 +157,13 @@ Parser.prototype.requestQueue = function() {
         var arr = this.queue.pop();
         if (arr === undefined)
             return;
-        var tries       = arr.shift() - 1;
-        var method      = arr.shift();
-        var url         = arr.shift();
-        var params      = arr.shift();
-        var cb          = arr.shift();
-        var opts        = arr.shift();
+        var i = 0;
+        var tries       = arr[i++] - 1;
+        var method      = arr[i++];
+        var url         = arr[i++];
+        var params      = arr[i++];
+        var cb          = arr[i++];
+        var opts        = arr[i++];
 
         if (url.substr(0, 1) === '//')
             url = 'http:' + url;
@@ -212,7 +213,7 @@ Parser.prototype.requestQueue = function() {
                 //else if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
                 //    document = libxml.parseXml(data.toString().replace(/ ?xmlns=['"][^'"]*./g, ''));
                 }else{
-                    document = libxml.parseHtml(data, { baseUrl: href });
+                    document = libxml.parseHtml(data, { baseUrl: href, huge: true });
                 }
                 if (document !== null) {
                     if (document.errors[0] !== undefined && document.errors[0].code === 4) {
@@ -260,7 +261,7 @@ Parser.prototype.requestQueue = function() {
             }else{
                 document = data;
             }
-            if (err) {
+            if (err !== null) {
                 if (proxies !== undefined && (res === undefined || res.statusCode !== 404)) {
                     if (self.opts.error === true)
                         self.promise.error('proxy '+(proxies.index+1)+'/'+proxies.length+' failed ('+opts.proxy+')')
@@ -273,7 +274,12 @@ Parser.prototype.requestQueue = function() {
                     err = err.message;
                 if (tries > 0) {
                     err += ', trying again';
+
                     self.stack.push();
+                    // We must call stack.push again here in case
+                    // a retry is queued right before the stack count hits 0.
+                    // This would cause .done() to be called multiple times.
+
                     self.queue.push([tries, method, href, params, cb, opts])
                     if (self.opts.log === true)
                         self.promise.log(href+' - tries: '+(opts.tries-tries)+'/'+opts.tries+'')
@@ -281,7 +287,7 @@ Parser.prototype.requestQueue = function() {
             }
             if (res !== undefined)
                 res.url = url;
-            cb(err, res, document);
+            cb(err, res, document, tries === 0);
             self.requestQueue();
         });
 

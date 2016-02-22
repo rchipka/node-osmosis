@@ -15,12 +15,15 @@ var server = http.createServer(function(req, res) {
                 postData += chunk.toString();
             })
             req.on('end', function() {
-                paths[uri](url, req, res, qs.parse(postData))
+                if (!req.headers['content-type'] || req.headers['content-type'].indexOf('multipart') !== 0)
+                    postData = qs.parse(postData);
+                paths[uri](url, req, res, postData)
             })
         }else
             paths[uri](url, req, res)
     }else{
-        res.send(404)
+        res.writeHead(404);
+        res.end();
     }
 });
 

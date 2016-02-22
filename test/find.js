@@ -33,7 +33,7 @@ module.exports.array = function(assert) {
 module.exports.select = function(assert) {
     var count = 0;
     osmosis.get(url)
-    .find('li:last')
+    .find('ul:last > li:last')
     .select('b')
     .then(function(context, data) {
         count++;

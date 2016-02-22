@@ -8,10 +8,30 @@ HTML/XML parser and web scraper for NodeJS.
 
 ##Features
 
-- Fast: uses libxml C bindings
-- Clean: promise-like interface
-- Flexible: supports both CSS and XPath selectors
-- Lightweight: no dependencies like jQuery, cheerio, or jsdom
+- Uses native libxml C bindings
+- Clean promise-like interface
+- Supports CSS 3.0 and XPath 1.0 hybrids in a single selector
+- Powerful JQuery-like [CSS extensions](https://github.com/rc0x03/node-libxmljs-dom/wiki/XCSS---Selector-Intro)
+- No large dependencies like jQuery, cheerio, or jsdom
+- Supports deep and complex data structures
+
+- HTML parser features
+    - Fast parsing
+    - Very fast searching
+    - Small memory footprint
+
+- HTML DOM features
+    - Load and search ajax content
+    - DOM interaction and events
+    - Execute embedded and remote scripts
+    - Execute code in the DOM
+
+- HTTP request features
+    - Logs urls, redirects, and errors
+    - Cookie jar and custom cookies/headers/user agent
+    - Login/form submission, session cookies, and basic auth
+    - Single proxy or multiple proxies and handles proxy failure
+    - Retries and redirect limits
 
 ##Example: scrape all craigslist listings
 
@@ -57,5 +77,10 @@ For documentation and examples check out [https://github.com/rc0x03/node-osmosis
 
 ##Donate
 Donations will accelerate development and improve the quality and stability of this project.
+
+###Donation offers:
+
+ - $15 - A custom Osmosis scraper to extract the data you need efficiently and in as few lines of code as possible.
+ - $25/month - Become a sponsor. Your company will be listed on this page. Priority support and bug fixes.
 
 [![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?item_name=node-osmosis&cmd=_donations&business=NAXMWBMWKUWUU)

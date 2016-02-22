@@ -36,19 +36,22 @@ module.exports.function_url = function(assert) {
 }
 
 module.exports.redirect = function(assert) {
+    var calledThen = false;
     osmosis.get(url+'/?redirect=true')
     .then(function(context, data) {
+        calledThen = true;
         assert.ok(context.request.headers.referer.length > 0)
         assert.ok(context.get('div').text() == context.location.pathname)
         assert.ok(context.get('div').text().indexOf('redirect') !== -1)
     })
     .done(function() {
+        assert.ok(calledThen)
         assert.done();
     })
 }
 
 module.exports.error_404 = function(assert) {
-    var tries = 3;
+    var tries = 4;
     osmosis.get(url+'/404')
     .config('tries', tries)
     .error(function(msg) {
@@ -62,24 +65,23 @@ module.exports.error_404 = function(assert) {
 }
 
 module.exports.error_redirect = function(assert) {
-    var tries = 3;
+    var redirects = 3;
     osmosis.get(url+'/error-redirect')
-    .config('follow', tries)
-    .config('follow', tries)
+    .config('follow', redirects)
     .error(function(msg) {
         if (msg.indexOf('redirect') > -1)
-            tries--;
+            redirects--;
     })
     .done(function() {
-        assert.ok(tries === 0);
+        assert.ok(redirects === 0);
         assert.done();
     })
 }
 
 module.exports.error_parse = function(assert) {
-    var tries = 3;
+    var tries = 4;
     osmosis.get(url+'/error-parse')
-    .config('follow', tries)
+    .config('tries', tries)
     .error(function(msg) {
         if (msg.indexOf('empty') > -1)
             tries--;
