@@ -295,6 +295,7 @@ Parser.prototype.requestQueue = function() {
             if (self.opts.log === true)
                 self.promise.log('[redirect] '+url.href+' -> '+new_url)
             extend(url, URL.parse(new_url));
+            href = url.href;
         })
     }
 }
