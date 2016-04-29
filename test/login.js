@@ -3,89 +3,107 @@ var server = require('./server');
 var URL = require('url');
 var fs = require('fs');
 
-var url = server.host+':'+server.port;
+var url = server.host + ':' + server.port;
 var user = 'user';
 var pass = 'pass';
 
-module.exports.form = function(assert) {
+module.exports.form = function (assert) {
     var errors = 0;
+
     osmosis
-    .get(url+'/form')
-    .login(user, pass, 'div:contains("authenticated")')
-    .then(function(context, data) {
-        assert.ok(context.get('div').text() == 'authenticated');
+    .get(url + '/form')
+    .login(user, pass)
+    .success('div:contains("authenticated")')
+    .then(function (context) {
+        assert.equal(context.get('div').text(), 'authenticated');
     })
     .follow('a')
-    .then(function(context, data) {
+    .then(function (context) {
         var div = context.get('div');
-        assert.ok(div !== null)
-        assert.ok(div.text() == 'done');
+
+        assert.ok(div !== null);
+        assert.equal(div.text(), 'done');
     })
-    .error(function(msg) {
+    .error(function () {
         errors++;
     })
-    .done(function() {
-        assert.ok(errors === 0);
+    .done(function () {
+        assert.equal(errors, 0);
         assert.done();
-    })
-}
+    });
+};
 
-module.exports.basic_auth = function(assert) {
+module.exports.basic_auth = function (assert) {
     var errors = 0;
+
     osmosis
+    .get(url + '/basic_auth')
     .config({ username: user, password: pass })
-    .get(url+'/basic_auth')
-    .then(function(context, data) {
-        assert.ok(context.get('div').text() == 'authenticated');
+    .then(function (context) {
+        assert.equal(context.get('div').text(), 'authenticated');
     })
     .follow('a')
-    .then(function(context, data) {
-        assert.ok(context.get('div').text() == 'done');
+    .then(function (context) {
+        assert.equal(context.get('div').text(), 'done');
     })
-    .error(function(msg) {
+    .error(function () {
         errors++;
     })
-    .done(function() {
-        assert.ok(errors === 0);
+    .done(function () {
+        assert.equal(errors, 0);
         assert.done();
-    })
-}
+    });
+};
 
-server('/basic_auth', function(url, req, res, data) {
+server('/basic_auth', function (url, req, res) {
+    var base64, arr;
+
     if (req.headers.authorization) {
-        var base64 = new Buffer(req.headers.authorization.replace('Basic ', ''), 'base64');
-        var arr = base64.toString().split(':')
+        base64 = new Buffer(
+                    req.headers.authorization.replace('Basic ', ''),
+                    'base64');
+        arr = base64.toString().split(':');
+
         if (arr[0] != user || arr[1] != pass) {
             res.write('<div>Invalid username or password</div>');
-        }else{
+        } else {
             if (url.query.next) {
-                res.write('<div>done</div>')
-            }else{
-                res.write('<div>authenticated</div><a href="?next=true"></a>')
+                res.write('<div>done</div>');
+            } else {
+                res.write('<div>authenticated</div><a href="?next=true"></a>');
             }
         }
-    }else{
-        res.writeHead(401, {"Content-Type": "text/html", "Authorization": 'Basic realm="login"'})
-        res.write('<div>unauthenticated</div>')
+    } else {
+        res.writeHead(401, { "Content-Type": "text/html",
+                             "Authorization": 'Basic realm="login"' });
+        res.write('<div>unauthenticated</div>');
     }
-    res.end();
-})
 
-server('/form', function(url, req, res, data) {
+    res.end();
+});
+
+server('/form', function (url, req, res, data) {
     res.setHeader('Content-Type', 'text/html');
+
     if (req.method === 'GET') {
         if (url.query.next && req.headers.cookie == 'auth=true') {
-            res.write('<div>done</div>')
-        }else{
-            res.write('<body><form method="POST"><input name="outer" /><input name="user" /><input name="remember" type="checkbox" /><input type="password" name="pass" /></form></body>')
+            res.write('<div>done</div>');
+        } else {
+            res.write('<body><form method="POST">' +
+                        '<input name="outer" />' +
+                        '<input name="user" />' +
+                        '<input name="remember" type="checkbox" />' +
+                        '<input type="password" name="pass" />' +
+                      '</form></body>');
         }
-    }else{
+    } else {
         if (data.user == user && data.pass == pass) {
             res.setHeader('Set-Cookie', 'auth=true; Domain=.yahoo.com');
-            res.write('<div>authenticated</div><a href="?next=true"')
-        }else{
-            res.write('<div>unauthenticated</div>')
+            res.write('<div>authenticated</div><a href="?next=true"');
+        } else {
+            res.write('<div>unauthenticated</div>');
         }
     }
+
     res.end();
-})
+});

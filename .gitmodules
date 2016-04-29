@@ -1,0 +1,3 @@
+[submodule "osmosis.github.io"]
+    path = docs
+    url  = https://github.com/rc0x03/osmosis.github.io

@@ -8,6 +8,7 @@ module.exports.ajax = function(assert) {
     osmosis.get(url)
     .click('.ajax')
     .then(function(context, data) {
+        console.log(context.toString())
         assert.ok(context.get('.ajax').text() == 'loaded');
     })
     .done(function() {
