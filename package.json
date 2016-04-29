@@ -1,6 +1,6 @@
 {
     "name": "osmosis",
-    "version": "0.1.3",
+    "version": "1.0.0",
     "description": "Web scraper for NodeJS",
     "keywords": [
         "web",
