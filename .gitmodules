@@ -1,3 +1,3 @@
-[submodule "osmosis.github.io"]
+[submodule "docs"]
     path = docs
-    url  = https://github.com/rc0x03/osmosis.github.io
+    url  = https://github.com/rchipka/node-osmosis/tree/gh-pages
