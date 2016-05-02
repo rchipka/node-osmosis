@@ -1,3 +1,4 @@
 [submodule "docs"]
-    path = docs
-    url  = https://github.com/rchipka/node-osmosis/tree/gh-pages
+	path = docs
+	url = ./docs
+	branch = gh-pages
