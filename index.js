@@ -28,14 +28,27 @@ var Command  = require('./lib/Command.js'),
 /**
  *
  * Unless called with `new`, Osmosis will start automatically.
- * To start a `new` instance, use `.run()`.
+ * To start an instance created with `new`, use {@link Osmosis.run}.
  *
  * @constructor Osmosis
  *
  * @param {(string|contextCallback)} url - A URL
  * @param {object} [params] - GET query parameters
- * @returns {Command}
- * @see {@link Command.run}
+ * @returns Command
+ * @see Command.run
+ *
+ * @example {@lang javascript}
+ *
+ * // These instances start immediately
+ * osmosis.get('http://example.com');
+ * osmosis('http://example.com');
+ *
+ * // These instances need started
+ * instance = new osmosis.get('http://example.com');
+ * instance.run();
+ *
+ * instance = new osmosis('http://example.com');
+ * instance.run();
  */
 
 function Osmosis(url, params) {
@@ -53,7 +66,50 @@ function Osmosis(url, params) {
 }
 
 /**
- * @name Options
+ * Keep track of async operations so we know when to call {@link Command.done}
+ * @private
+ */
+
+Osmosis.prototype.stack = {
+    change:     0,
+    count:      0,
+    done:       0,
+    requests:   0,
+    push: function () {
+        if (++this.change >= 25) {
+            if (this.instance.resources !== null) {
+                this.instance.resources();
+            }
+
+            this.change = 0;
+        }
+
+        return ++this.count;
+    },
+    pop: function () {
+        var self = this;
+
+        process.nextTick(function () {
+            var instance;
+
+            if (--self.count === 0) {
+                instance = self.instance;
+                instance.command.done();
+
+                if (instance.opts.debug === true) {
+                    instance.resources();
+                }
+            }
+        });
+
+        this.change++;
+
+        return this.count;
+    }
+};
+
+/**
+ * @name options
  *
  * @property {string} accept             - HTTP Accept header
  * @property {bool}   compressed         - Compress HTTP requests
@@ -63,6 +119,7 @@ function Osmosis(url, params) {
  * @property {bool}   follow_set_cookies - Set cookies for redirects
  * @property {bool}   follow_set_referer - Set referer header for redirects
  * @memberof Osmosis
+ * @instance
  * @default
  */
 
@@ -90,9 +147,12 @@ Osmosis.prototype.opts = {
  *
  * @function config
  * @memberof Osmosis
- * @param {string|object} (key|opts) - A string `key` or an object of
+ * @param {string|object} option - A string `key` or an object of
  * { key: value } pairs.
- * @param {any} [val] - A value for the `key`
+ * @param {any} [value] - A value for the `key`
+ * @instance
+ * @see Command.config
+ * @see Osmosis.options
  */
 
 Osmosis.config =
@@ -134,6 +194,7 @@ Osmosis.prototype.config = function (key, val) {
  * initialize the instance once and repeatedly use `run` as needed.
  *
  * @borrows Command.run
+ * @see {@link Command.run}
  */
 Osmosis.prototype.run = function () {
     var self = this;
@@ -147,99 +208,9 @@ Osmosis.prototype.run = function () {
 };
 
 /**
- * Set the parent instance for this instance.
- *
- * Inherit the parent's stack and options
- */
-
-Osmosis.prototype.setParent = function (parent) {
-    this.parent = parent;
-    this.stack  = parent.instance.stack;
-    this.queue  = parent.instance.queue;
-    this.opts   = parent.instance.opts;
-};
-
-/**
- * Resume the current instance.
- *
- * @param {function} callback - A function to call when resuming
- * @borrows Command.resume
- * @private
- */
-
-Osmosis.prototype.resume = function (arg) {
-    var length, i;
-
-    if (typeof arg === 'function') {
-        if (this.resumeQueue === undefined) {
-            this.resumeQueue = [];
-        }
-
-        this.resumeQueue.push(arg);
-    } else {
-        length = this.resumeQueue.length;
-
-        for (i = 0; i < length; ++i) {
-            this.resumeQueue[i]();
-        }
-
-        this.request();
-    }
-};
-
-/**
- * Parse XML/HTML data.
- *
- * @param {string|buffer} data - The data to parse
- * @param {object} opts - libxmljs parse options
- * @protected
- */
-
-Osmosis.prototype.parse = function (data, opts) {
-    /*
-     * We only use `parseHtml` because we need to
-     * avoid libxml namespaces when searching the document.
-     */
-
-    var document = libxml.parseHtml(data, opts);
-
-    if (opts !== undefined && opts.baseUrl !== undefined) {
-        document.location = opts.baseUrl;
-    }
-
-    return document;
-};
-
-/**
- * Add a request to the queue.
- *
- * @param {string} method - HTTP request method
- * @param {string} url - The URL to request
- * @param {object} params - HTTP GET/POST Data
- * @param {object} opts - HTTP request options
- * @param {function} callback - Function to call when done
- * @protected
- */
-
-Osmosis.prototype.queueRequest = function (url,
-                                           opts,
-                                           cb,
-                                           tries) {
-    this.stack.push();
-
-    if (tries === undefined) {
-        tries = opts.tries;
-    }
-
-    this.queue.push([tries, url, opts, cb]);
-
-    this.request();
-};
-
-/**
  * Make an HTTP request.
  *
- * @protected
+ * @private
  */
 
 Osmosis.prototype.request = function () {
@@ -377,9 +348,59 @@ Osmosis.prototype.request = function () {
 };
 
 /**
+ * Add a request to the queue.
+ *
+ * @param {string} method - HTTP request method
+ * @param {string} url - The URL to request
+ * @param {object} params - HTTP GET/POST Data
+ * @param {object} opts - HTTP request options
+ * @param {function} callback - Function to call when done
+ * @private
+ */
+
+Osmosis.prototype.queueRequest = function (url,
+                                           opts,
+                                           cb,
+                                           tries) {
+    this.stack.push();
+
+    if (tries === undefined) {
+        tries = opts.tries;
+    }
+
+    this.queue.push([tries, url, opts, cb]);
+
+    this.request();
+};
+
+/**
+ * Parse XML/HTML data.
+ *
+ * @param {string|buffer} data - The data to parse
+ * @param {object} opts - libxmljs parse options
+ * @private
+ * @see Command.parse
+ */
+
+Osmosis.prototype.parse = function (data, opts) {
+    /*
+     * We only use `parseHtml` because we need to
+     * avoid libxml namespaces when searching the document.
+     */
+
+    var document = libxml.parseHtml(data, opts);
+
+    if (opts !== undefined && opts.baseUrl !== undefined) {
+        document.location = opts.baseUrl;
+    }
+
+    return document;
+};
+
+/**
  * Print Node.JS process statistics via {@link Command.debug}.
  *
- * @protected
+ * @private
  */
 
 Osmosis.prototype.resources = function () {
@@ -421,45 +442,46 @@ Osmosis.prototype.resources = function () {
 };
 
 /**
- * Keep track of async operations so we know when to call {@link Command.done}
+ * Set the parent instance for this instance.
+ *
+ * Inherit the parent's stack and options.
+ *
+ * @private
+ * @param {Command} parent - The parent Command.
+ */
+
+Osmosis.prototype.setParent = function (parent) {
+    this.parent = parent;
+    this.stack  = parent.instance.stack;
+    this.queue  = parent.instance.queue;
+    this.opts   = parent.instance.opts;
+};
+
+/**
+ * Resume the current instance.
+ *
+ * @param {function} callback - A function to call when resuming
+ * @borrows Command.resume
  * @private
  */
 
-Osmosis.prototype.stack = {
-    change:     0,
-    count:      0,
-    done:       0,
-    requests:   0,
-    push: function () {
-        if (++this.change >= 25) {
-            if (this.instance.resources !== null) {
-                this.instance.resources();
-            }
+Osmosis.prototype.resume = function (arg) {
+    var length, i;
 
-            this.change = 0;
+    if (typeof arg === 'function') {
+        if (this.resumeQueue === undefined) {
+            this.resumeQueue = [];
         }
 
-        return ++this.count;
-    },
-    pop: function () {
-        var self = this;
+        this.resumeQueue.push(arg);
+    } else {
+        length = this.resumeQueue.length;
 
-        process.nextTick(function () {
-            var instance;
+        for (i = 0; i < length; ++i) {
+            this.resumeQueue[i]();
+        }
 
-            if (--self.count === 0) {
-                instance = self.instance;
-                instance.command.done();
-
-                if (instance.opts.debug === true) {
-                    instance.resources();
-                }
-            }
-        });
-
-        this.change++;
-
-        return this.count;
+        this.request();
     }
 };
 
@@ -527,6 +549,14 @@ libxml.Element.prototype.find = function (selector) {
  *
  * A CSS/XPath selector
  * @see {@link https://rchipka.github.io/libxmljs-dom/|Selector}
+ */
+
+/**
+ * A callback function that returns the desired value.
+ *
+ * @callback middlewareCallback
+ * @param {context} context - The current XML/HTML context node.
+ * @param {data} data - The current data object.
  */
 
 module.exports = Osmosis;

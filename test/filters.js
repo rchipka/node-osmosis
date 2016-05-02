@@ -1,8 +1,13 @@
 var osmosis = require('../index'),
-    html = '<head><title>test</title></head><body><b>1</b><b>2</b><b>3</b></body>';
+    html = '<head>' +
+            '<title>test</title>' +
+            '</head><body>' +
+                '<b>1</b><b>2</b><b>3</b>' +
+            '</body>';
 
 module.exports.contains = function (assert) {
-    count = 0;
+    var count = 0;
+
     osmosis
     .parse(html)
     .find("b")
@@ -11,31 +16,36 @@ module.exports.contains = function (assert) {
         count++;
     })
     .done(function () {
-        assert.ok(count === 1);
+        assert.equal(count, 1);
         assert.done();
     });
 };
 
-/*
- * DEPRECATED
+module.exports.fail = function (assert) {
+    var count = 0, errored = false;
 
-module.exports.failure = function (assert) {
-    count = 0;
     osmosis
     .parse(html)
     .find("b")
-    .failure("node():contains('1')")
+    .fail("node():contains('1')")
     .then(function () {
         count++;
     })
+    .error(function (msg) {
+        if (msg.indexOf('node():contains') > -1) {
+            errored = true;
+        }
+    })
     .done(function () {
-        assert.ok(count === 2);
+        assert.ok(errored);
+        assert.equal(count, 2);
         assert.done();
     });
-};*/
+};
 
 module.exports.filter = function (assert) {
-    count = 0;
+    var count = 0;
+
     osmosis
     .parse(html)
     .find("b")
@@ -50,7 +60,8 @@ module.exports.filter = function (assert) {
 };
 
 module.exports.match = function (assert) {
-    count = 0;
+    var count = 0;
+
     osmosis
     .parse(html)
     .find("b")
