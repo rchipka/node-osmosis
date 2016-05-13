@@ -1,14 +1,11 @@
-/*jslint node: true */
 'use strict';
 
-var Command  = require('./lib/Command.js'),
-    needle  = require('needle'),
+var Command = require('./lib/Command.js'),
+    request = require('./lib/Request.js'),
     libxml  = require('libxmljs-dom'),
-    URL     = require('url'),
     instanceId      = 0,
     memoryUsage     = 0,
     cachedSelectors = {},
-
     toMB    = function (size, num) {
         return (size / 1024 / 1024).toFixed(num || 2) + 'Mb';
     },
@@ -55,9 +52,9 @@ function Osmosis(url, params) {
     if (url !== undefined) {
         if (this instanceof Osmosis) {
             return new Osmosis.get(url, params);
-        } else {
-            return Osmosis.get(url, params);
         }
+
+        return Osmosis.get(url, params);
     }
 
     this.queue   = [];
@@ -133,6 +130,7 @@ Osmosis.prototype.opts = {
     follow_set_cookies:     true,
     follow_set_referer:     true,
     keep_data:              false,
+    parse_cookies:          true, // Parse "Set-Cookie" header
     parse_response:         false,
     rejectUnauthorized:     false,
     statsThreshold:         25,
@@ -156,34 +154,29 @@ Osmosis.prototype.opts = {
  */
 
 Osmosis.config =
-Osmosis.prototype.config = function (key, val) {
+Osmosis.prototype.config = function (option, value) {
+    var hasPrototype = (this.prototype !== undefined),
+        opts, key;
 
-    var opts, hasPrototype = (this.prototype !== undefined);
-
-
-    if (key === undefined) {
-        if (hasPrototype) {
-            return this.prototype.opts;
-        } else {
-            return this.opts;
-        }
+    if (hasPrototype === true) {
+        opts = this.prototype.opts;
+    } else if (this.opts === undefined) {
+        opts = this.opts = {};
+    } else {
+        opts = this.opts;
     }
 
-    if (val !== undefined) {
-        opts = {};
-        opts[key] = val;
+    if (option === undefined) {
+        return opts;
+    }
+
+    if (value !== undefined) {
+        opts[option] = value;
     } else if (key !== undefined) {
-        opts = key;
-    }
-
-    for (key in opts) {
-        if (hasPrototype) {
-            this.prototype.opts[key] = opts[key];
-        } else {
-            this.opts[key] = opts[key];
+        for (key in option) {
+            opts[key] = option[key];
         }
     }
-
 };
 
 /**
@@ -213,138 +206,60 @@ Osmosis.prototype.run = function () {
  * @private
  */
 
-Osmosis.prototype.request = function () {
-
-    var i           = 0,
-        self        = this,
-        document    = null,
-        arr, tries, method,
-        url, params, opts, cb;
-
-    if (this.queue.length === 0 ||
-        this.stack.requests >= this.opts.concurrency) {
-        return;
-    }
-
-    arr         = this.queue.pop();
-    tries       = arr[i] - 1;
-    url         = arr[++i];
-    opts        = arr[++i];
-    cb          = arr[++i];
-
-    method = url.method;
-    params = url.params;
+Osmosis.prototype.request = function (url, opts, callback, tries) {
+    var self = this,
+        method = url.method,
+        params = url.params;
 
     this.requests++;
     this.stack.requests++;
+    this.stack.push();
 
-    needle.request(method, url.href, params, opts, function (err, res, data) {
-        self.stack.requests--;
+    request(url.method,
+            url,
+            url.params,
+            opts,
+            tries,
+            function (err, res, data) {
+                var proxies = opts.proxies;
 
-        if (opts.process_response !== undefined) {
-            data = opts.process_response(data);
-        }
+                self.stack.requests--;
 
+                if ((res === undefined || res.statusCode !== 404) &&
+                    proxies !== undefined) {
+                    self.command.error('proxy ' + (proxies.index + 1) +
+                                        '/' + proxies.length +
+                                        ' failed (' + opts.proxy + ')');
 
-        if (opts.ignore_http_errors !== true &&
-            res                     !== undefined &&
-            res.statusCode          >=  400   &&
-            res.statusCode          <=  500) {
-            // HTTP error
-            err = res.statusCode + ' ' + res.statusMessage;
-        }
-
-        if (!err && method !== 'head' && (!data || data.length === 0)) {
-            err = 'Data is empty';
-        }
-
-        if (!err && opts.parse !== false) {
-            document = libxml.parseHtml(data,
-                                        { baseUrl: url.href, huge: true });
-        }
-
-        if (document === null) {
-            document = data;
-        } else if (document.errors[0] !== undefined &&
-                  document.errors[0].code === 4) {
-            err = 'Document is empty';
-        } else if (document.root() === null) {
-            err = 'Document has no root';
-        } else {
-            url.method     = method;
-            url.headers    = res.req._headers;
-            url.proxy      = opts.proxy;
-            url.user_agent = opts.user_agent;
-
-            document.location = url;
-            document.request  = url;
-            document.response = {
-                type: (res.headers['content-type'] || ' ')
-                      .indexOf('xml') !== -1 ?
-                      'xml' :
-                      'html',
-                statusCode: res.statusCode,
-                statusMessage: res.statusMessage,
-                headers: res.headers
-            };
-
-            if (res.socket !== undefined) {
-                //url.path    = res.socket._httpMessage.path.replace(/\?$/, '');
-                document.response.size = {
-                    total: res.socket.bytesRead,
-                    headers: res.socket.bytesRead - data.length,
-                    body: data.length
-                };
-            }
-
-            if (self.opts.keep_data === true) {
-                document.response.data = data;
-            }
-
-            if (opts.cookies === undefined) {
-                opts.cookies = {};
-            }
-
-            if (res.cookies !== undefined) {
-                extend(opts.cookies, res.cookies);
-            }
-
-            if (document.cookies === undefined) {
-                document.cookies = {};
-            }
-
-            extend(document.cookies, opts.cookies);
-        }
-
-        if (err !== null) {
-            if (err.message !== undefined) {
-                err = err.message;
-            }
-
-            if (tries > 0) {
-                err += ', trying again';
-
-                self.queueRequest(url, opts, cb, tries);
-
-                if (self.opts.log === true) {
-                    self.command.log(url.href + ' - tries: ' +
-                                    (opts.tries - tries) +
-                                    '/' + opts.tries + '');
+                    // remove the failing proxy
+                    if (proxies.length > 1) {
+                        opts.proxies.splice(proxies.index, 1);
+                        opts.proxy = proxies[proxies.index];
+                    }
                 }
-            }
-        }
 
-        cb(err, res, document, tries === 0);
+                if (err !== null && tries < opts.tries) {
+                    self.queueRequest(url, opts, callback, tries + 1);
 
-        self.request();
-    })
-    .on('redirect', function (new_url) {
-        if (self.opts.log === true) {
-            self.command.log('[redirect] ' + url.href + ' -> ' + new_url);
-        }
+                    if (self.opts.log === true) {
+                        self.command.error(err + ', retrying ' +
+                                        url.href + ' (' +
+                                        (tries + 1) + '/' +
+                                        opts.tries + ')');
+                    }
+                } else {
+                    callback(err, res, data);
+                }
 
-        url = URL.parse(new_url);
-    });
+                self.dequeueRequest();
+                self.stack.pop();
+            })
+            .on('redirect', function (new_url) {
+                if (self.opts.log === true) {
+                    self.command.log('[redirect] ' +
+                                     url.href + ' -> ' + new_url);
+                }
+            });
 };
 
 /**
@@ -360,17 +275,31 @@ Osmosis.prototype.request = function () {
 
 Osmosis.prototype.queueRequest = function (url,
                                            opts,
-                                           cb,
+                                           callback,
                                            tries) {
-    this.stack.push();
-
     if (tries === undefined) {
-        tries = opts.tries;
+        tries = 0;
     }
 
-    this.queue.push([tries, url, opts, cb]);
+    if (this.stack.requests < this.opts.concurrency) {
+        this.request(url, opts, callback, tries);
+    } else {
+        this.queue.push([url, opts, callback, tries]);
+    }
+};
 
-    this.request();
+Osmosis.prototype.dequeueRequest = function () {
+    var arr, length = this.queue.length;
+
+    if (length === 0 || this.stack.requests >= this.opts.concurrency) {
+        return;
+    }
+
+    arr = this.queue[length - 1];
+
+    this.request(arr[0], arr[1], arr[2], arr[3]);
+
+    this.queue.pop();
 };
 
 /**
@@ -411,6 +340,7 @@ Osmosis.prototype.resources = function () {
 
     if (this.opts.debug !== true) {
         this.resources = null;
+
         return;
     }
 
@@ -481,7 +411,7 @@ Osmosis.prototype.resume = function (arg) {
             this.resumeQueue[i]();
         }
 
-        this.request();
+        this.dequeueRequest();
     }
 };
 

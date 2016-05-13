@@ -68,7 +68,7 @@ module.exports.multiple = function (assert) {
     })
     .get('/?err=true')
     .done(function () {
-        assert.ok(p.length === 1);
+        assert.equal(p.length, 1);
         proxies.forEach(function (proxy) {
             proxy.close();
         });

@@ -12,7 +12,7 @@ module.exports.selector_array = function (assert) {
         count++;
     })
     .done(function () {
-        assert.ok(count == 7);
+        assert.ok(count === 7);
         assert.done();
     });
 };

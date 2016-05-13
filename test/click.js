@@ -1,14 +1,16 @@
-var osmosis = require('../index');
-var server = require('./server');
-var URL = require('url');
+var osmosis = require('../index'),
+    server = require('./server'),
+    URL = require('url'),
+    url = server.host + ':' + server.port;
 
-var url = server.host + ':' + server.port;
+process.on('uncaughtException', function (err) {
+    console.error(err.stack);
+});
 
 module.exports.ajax = function (assert) {
     osmosis.get(url)
     .click('.ajax')
     .then(function (context) {
-        console.log(context.toString());
         assert.ok(context.get('.ajax').text() == 'loaded');
     })
     .done(function () {
@@ -52,16 +54,16 @@ server('/click.js', function (url, req, res) {
         var xmlhttp = new XMLHttpRequest();
         var ajax = document.querySelector('.ajax');
 
-        ajax.addEventListener('click', function (e) {
+        ajax.addEventListener('click', function () {
             xmlhttp.open("GET", "/ajax", true);
             xmlhttp.send();
-        })
+        });
 
         xmlhttp.onreadystatechange = function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-                ajax.innerHTML = xmlhttp.responseText
+                ajax.innerHTML = xmlhttp.responseText;
             }
-        }
+        };
     }).toString() + ')(window)');
     res.end();
-})
+});

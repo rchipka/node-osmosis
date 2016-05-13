@@ -5,6 +5,9 @@ var osmosis = require('../index'),
     expected = {
         title: "TITLE",
         content: "CONTENT",
+        innerHTML: '<meta http-equiv="Content-Type" ' +
+                   'content="text/html; charset=UTF-8"><title>TITLE</title>',
+        source: '<title>TITLE</title>',
         object: {
             id: 'content'
         },
@@ -127,6 +130,8 @@ module.exports.nested = function (assert) {
         title: 'title',
         content: '#content',
         fake: 'fake-selector',
+        innerHTML: 'head:html',
+        source: 'title:source',
         object: {
             id: 'div@id',
             fake: 'fake-selector'
