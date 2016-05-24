@@ -89,7 +89,8 @@ module.exports.instance_cookies = function (assert) {
         })
         .set({
             'get_cookies': 'cookie',
-            'post_cookies': osmosis.post(url + '/headers').find('cookie'),
+            'post_cookies': osmosis.post(url + '/set-cookie-redirect')
+                            .follow('a').find('cookie'),
             'follow_cookies': osmosis.follow('a')
                                 .find('cookie')
                                 .then(function (node, data, next) {
@@ -104,17 +105,17 @@ module.exports.instance_cookies = function (assert) {
         })
         .data(function (data) {
             assert.deepEqual(parseCookies(data.get_cookies), expected);
-            assert.deepEqual(parseCookies(data.post_cookies), expected);
             assert.deepEqual(data.follow_cookies, expected);
             // Not yet supported by Needle
             // expected.testSetCookie1 = 'true';
             expected.testSetCookie2 = 'true';
+            assert.deepEqual(parseCookies(data.post_cookies), expected);
             assert.deepEqual(data.set_cookies, expected);
         })
         .done(function () {
             osmosis.config('cookies', {});
             assert.done();
-        });
+        }).log(console.log).error(console.log);
 
     instance.cookie('cookie2', true);
 
@@ -171,6 +172,7 @@ server('/headers', function (url, req, res) {
     res.end();
 });
 
+/* TODO: Save redirect cookies once Needle is capable. */
 server('/set-cookie-redirect', function (href, req, res) {
     res.writeHead(301, { Location: 'http://' + url + '/set-cookie',
                          'Set-Cookie': 'testSetCookie1=true' });
