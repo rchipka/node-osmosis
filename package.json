@@ -33,7 +33,7 @@
   "license": "MIT",
   "main": "index",
   "engines": {
-    "node": ">= 0.8.0"
+    "node": ">= 0.10.x"
   },
   "readmeFilename": "Readme.md",
   "bugs": {
