@@ -203,13 +203,13 @@ Parser.prototype.requestQueue = function() {
                 data = opts.process_response(data);
 
             if (err === null && res.statusCode >= 400 && res.statusCode <= 500 && opts.ignore_http_errors !== true)
-                err = res.statusCode+' '+res.statusMessage;
+                err = {errorType: 'ERR_STATUS', errorMessage: res.statusMessage, statusCode: res.statusCode, url: url, data: data};
 
             if (opts.parse !== false) {
                 if (err) {
                 }else if (data === null || data.length == 0) {
                     if (method !== 'head')
-                        err = 'Data is empty';
+                        err = {errorType: 'ERR_DATA_EMPTY', errorMessage: 'Data is empty', url: url};
                 //else if (res.headers['content-type'] !== undefined && res.headers['content-type'].indexOf('xml') !== -1)
                 //    document = libxml.parseXml(data.toString().replace(/ ?xmlns=['"][^'"]*./g, ''));
                 }else{
@@ -217,9 +217,9 @@ Parser.prototype.requestQueue = function() {
                 }
                 if (document !== null) {
                     if (document.errors[0] !== undefined && document.errors[0].code === 4) {
-                        err = 'Document is empty';
+                        err = {errorType: 'ERR_DOC_EMPTY', errorMessage: 'Document is empty', url: url};
                     }else if (document.root() === null) {
-                        err = 'Document has no root';
+                        err = {errorType: 'ERR_DOC_NO_ROOT', errorMessage: 'Document has no root', url: url};
                     }else{
                         url.url     = href;
                         url.method  = method;
@@ -264,16 +264,16 @@ Parser.prototype.requestQueue = function() {
             if (err !== null) {
                 if (proxies !== undefined && (res === undefined || res.statusCode !== 404)) {
                     if (self.opts.error === true)
-                        self.promise.error('proxy '+(proxies.index+1)+'/'+proxies.length+' failed ('+opts.proxy+')')
+                        self.promise.error({errorType: 'ERR_PROXY', errorMessage:'proxy '+(proxies.index+1)+'/'+proxies.length+' failed ('+opts.proxy+')'})
                     if (Array.isArray(proxies) && proxies.length > 1) {
                         opts.proxies.splice(proxies.index, 1);
                         opts.proxy = proxies[proxies.index];
                     }
                 }
                 if (err.message !== undefined)
-                    err = err.message;
+                    Object.assign(err, {errorMessage: err.message});
                 if (tries > 0) {
-                    err += ', trying again';
+                    Object.assign(err, {tryingAgain: true});
 
                     self.stack.push();
                     // We must call stack.push again here in case
@@ -295,7 +295,6 @@ Parser.prototype.requestQueue = function() {
             if (self.opts.log === true)
                 self.promise.log('[redirect] '+url.href+' -> '+new_url)
             extend(url, URL.parse(new_url));
-            href = url.href;
         })
     }
 }

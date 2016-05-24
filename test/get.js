@@ -55,7 +55,7 @@ module.exports.error_404 = function(assert) {
     osmosis.get(url+'/404')
     .config('tries', tries)
     .error(function(msg) {
-        if (msg.indexOf('404') > -1)
+        if (msg.statusCode === 404)
             tries--;
     })
     .done(function() {
@@ -69,7 +69,7 @@ module.exports.error_redirect = function(assert) {
     osmosis.get(url+'/error-redirect')
     .config('follow', redirects)
     .error(function(msg) {
-        if (msg.indexOf('redirect') > -1)
+        if (msg.errorMessage.indexOf('redirect') > -1)
             redirects--;
     })
     .done(function() {
@@ -83,7 +83,7 @@ module.exports.error_parse = function(assert) {
     osmosis.get(url+'/error-parse')
     .config('tries', tries)
     .error(function(msg) {
-        if (msg.indexOf('empty') > -1)
+        if (msg.errorMessage.indexOf('empty') > -1)
             tries--;
     })
     .done(function() {
