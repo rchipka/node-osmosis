@@ -20,7 +20,7 @@ module.exports.form = function (assert) {
     .then(function (context) {
         var div = context.get('div');
 
-        assert.ok(div !== null);
+        assert.ok(div);
         assert.equal(div.text(), 'done');
     })
     .error(function () {

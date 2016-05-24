@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "needle": "1.0.0",
-    "libxmljs-dom": "0.0.6"
+    "libxmljs-dom": "0.0.7"
   },
   "devDependencies": {
     "jscs": ">=3.0.2",

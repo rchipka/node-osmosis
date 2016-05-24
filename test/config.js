@@ -1,3 +1,5 @@
+'use strict';
+
 var osmosis = require('../index'),
     server = require('./server'),
     url = server.host + ':' + server.port,
@@ -115,7 +117,7 @@ module.exports.instance_cookies = function (assert) {
         .done(function () {
             osmosis.config('cookies', {});
             assert.done();
-        }).log(console.log).error(console.log);
+        });
 
     instance.cookie('cookie2', true);
 
