@@ -1,25 +1,22 @@
-var osmosis = require('../index');
+var osmosis = require('../index'),
+    html    = '<body><a href="/rel"></a></body>';
 
-var html = '<body><a href="/rel"></a></body>';
-
-module.exports.html = function(assert) {
+module.exports.html = function (assert) {
     osmosis.parse(html)
-    .then(function(context, data) {
-        assert.ok(context.find('body').length == 1)
+    .then(function (context) {
+        assert.equal(context.find('body').length, 1);
     })
-    .done(function() {
+    .done(function () {
         assert.done();
-    })
-    .log(console.log)
-    .error(console.error);
+    });
 };
 
-module.exports.base_url = function(assert) {
-    osmosis.parse(html, 'test.com')
-    .then(function(context, data) {
-        assert.ok(!!context.request.url);
+module.exports.base_url = function (assert) {
+    osmosis.parse(html, { baseUrl: 'test.com' })
+    .then(function (document) {
+        assert.ok(document.location.href);
     })
-    .done(function() {
+    .done(function () {
         assert.done();
-    })
+    });
 };

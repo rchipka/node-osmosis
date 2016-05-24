@@ -14,6 +14,17 @@
  * Add warnings for parser errors?
  * Switch to semantic versioning?
 
+## 0.1.4
+
+#### `get`
+
+ * Removed `opts` and `callback` arguments
+
+#### `set`
+
+ * Supports an array as the root data object
+ * Fixed case where nested `.find` searches the entire document
+
 ## 0.1.3
 
  * parseHtml uses `huge` option by default

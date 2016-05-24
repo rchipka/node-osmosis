@@ -1,76 +1,98 @@
-var osmosis = require('../index');
-var server = require('./server');
-var URL = require('url');
+var osmosis = require('../index'),
+    server = require('./server'),
+    URL = require('url'),
+    url = server.host + ':' + server.port;
 
-var url = server.host+':'+server.port;
-
-module.exports.css = function(assert) {
+module.exports.selector_array = function (assert) {
     var count = 0;
-    osmosis.get(url)
-    .find('.content ul:not([name]) li[2] b:last img')
-    .then(function(context, data) {
-        assert.ok(++count == context.attr('src'))
-    })
-    .done(function() {
-        assert.ok(count == 3);
-        assert.done();
-    })
-}
 
-module.exports.array = function(assert) {
-    var count = 0;
     osmosis.get(url)
     .find(['img', 'b'])
-    .then(function(context, data) {
+    .then(function () {
         count++;
     })
-    .done(function() {
-        assert.ok(count == 7);
+    .done(function () {
+        assert.ok(count === 7);
         assert.done();
-    })
-}
+    });
+};
 
-module.exports.select = function(assert) {
+module.exports.selector_css = function (assert) {
     var count = 0;
+
+    osmosis.get(url)
+    .find('.content ul:not([name]) li[2] b:last img')
+    .then(function (context) {
+        assert.ok(++count == context.getAttribute('src'));
+    })
+    .done(function () {
+        assert.ok(count == 3);
+        assert.done();
+    });
+};
+
+module.exports.nested = function (assert) {
+    var calledThen = true;
+
+    osmosis.get(url)
+    .find('ul:last')
+    .set({
+        'b': osmosis.find('b')
+    })
+    .then(function (context, data) {
+        calledThen = true;
+        assert.equal(data.b.length, 3);
+    })
+    .done(function () {
+        assert.ok(calledThen);
+        assert.done();
+    });
+};
+
+module.exports.select = function (assert) {
+    var count = 0;
+
     osmosis.get(url)
     .find('ul:last > li:last')
     .select('b')
-    .then(function(context, data) {
+    .then(function () {
         count++;
     })
-    .done(function() {
+    .done(function () {
         assert.ok(count == 2);
         assert.done();
-    })
-}
+    });
+};
 
-module.exports.xpath = function(assert) {
+module.exports.xpath = function (assert) {
     var count = 0;
+
     osmosis.get(url)
     .find('//div[@class]/ul[2]/li')
-    .then(function(context, data) {
+    .then(function () {
         count++;
     })
-    .done(function() {
+    .done(function () {
         assert.ok(count == 2);
         assert.done();
-    })
+    });
 };
 
-module.exports.both = function(assert) {
+module.exports.both = function (assert) {
     var count = 0;
+
     osmosis.get(url)
     .find('.content//preceding::[@name]')
-    .then(function(context, data) {
+    .then(function () {
         count++;
     })
-    .done(function() {
+    .done(function () {
         assert.ok(count == 1);
         assert.done();
-    })
+    });
 };
 
-server('/', function(url, req, res, data) {
+server('/', function (url, req, res) {
     res.setHeader("Content-Type", "text/html");
     res.write('<body>\
                 <div class="content">\
@@ -86,4 +108,4 @@ server('/', function(url, req, res, data) {
                 </div>\
                </body>');
     res.end();
-})
+});

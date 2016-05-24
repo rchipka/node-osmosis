@@ -1,130 +1,141 @@
-var osmosis = require('../index');
-var server = require('./server');
-var URL = require('url');
-var fs = require('fs');
+var osmosis = require('../index'),
+    server  = require('./server'),
+    URL     = require('url'),
+    fs      = require('fs'),
+    url     = server.host + ':' + server.port;
 
-var url = server.host+':'+server.port;
 
-module.exports.format_url = function(assert) {
+module.exports.function_url = function (assert) {
     osmosis.get(url)
-    .data(function(data) {
-        data.name = 'test'
+    .then(function (context, data, next) {
+        data.name = 'test';
+        next(context, data);
     })
-    .get('/%{name}-${p}')
-    .then(function(context, data) {
-        assert.ok(context.get('p').text().indexOf('success') !== -1)
+    .get(function (context, data) {
+        return data.name + '-' + context.querySelector('p').innerText;
     })
-    .done(function() {
+    .then(function (context) {
+        assert.ok(context.get('p').text().indexOf('success') !== -1);
+    })
+    .done(function () {
         assert.done();
-    })
-}
+    });
+};
 
-module.exports.function_url = function(assert) {
-    osmosis.get(url)
-    .data(function(data) {
-        data.name = 'test'
-    })
-    .get(function(context, data) {
-        return data.name+'-'+context.get('p').content();
-    })
-    .then(function(context, data) {
-        assert.ok(context.get('p').text().indexOf('success') !== -1)
-    })
-    .done(function() {
-        assert.done();
-    })
-}
+module.exports.redirect = function (assert) {
+    var calledThen = false,
+        logged = false;
 
-module.exports.redirect = function(assert) {
-    var calledThen = false;
-    osmosis.get(url+'/?redirect=true')
-    .then(function(context, data) {
+    osmosis.get(url + '/?redirect=true')
+    .then(function (context) {
         calledThen = true;
-        assert.ok(context.request.headers.referer.length > 0)
-        assert.ok(context.get('div').text() == context.location.pathname)
-        assert.ok(context.get('div').text().indexOf('redirect') !== -1)
+        assert.ok(context.request.headers.referer.length > 0);
+        assert.equal(context.get('div').text(),
+                     context.location.pathname);
+        assert.ok(context.get('div').text().indexOf('redirect') !== -1);
     })
-    .done(function() {
-        assert.ok(calledThen)
+    .log(function (msg) {
+        if (msg.indexOf('[redirect]') > -1) {
+            logged = true;
+        }
+    })
+    .done(function () {
+        assert.ok(calledThen);
+        assert.ok(logged);
         assert.done();
-    })
-}
+    });
+};
 
-module.exports.error_404 = function(assert) {
-    var tries = 4;
-    osmosis.get(url+'/404')
+module.exports.error_404 = function (assert) {
+    var tries = 5, tried = 0;
+
+    osmosis.get(url + '/404')
+    .config('ignore_http_errors', false)
     .config('tries', tries)
-    .error(function(msg) {
-        if (msg.indexOf('404') > -1)
-            tries--;
+    .error(function (msg) {
+        if (msg.indexOf('404') > -1 && msg.indexOf('try') > -1) {
+            tried++;
+        }
     })
-    .done(function() {
-        assert.ok(tries === 0);
+    .done(function () {
+        assert.strictEqual(tries, tried);
         assert.done();
-    })
-}
+    });
+};
 
-module.exports.error_redirect = function(assert) {
-    var redirects = 3;
-    osmosis.get(url+'/error-redirect')
-    .config('follow', redirects)
-    .error(function(msg) {
-        if (msg.indexOf('redirect') > -1)
-            redirects--;
+module.exports.error_redirect = function (assert) {
+    var max = 4, logged = 0, errored = 0;
+
+    osmosis.get(url + '/error-redirect')
+    .config('follow', max)
+    .config('tries', 1)
+    .log(function (msg) {
+        if (msg.indexOf('redirect') > -1) {
+            logged++;
+        }
     })
-    .done(function() {
-        assert.ok(redirects === 0);
+    .error(function (msg) {
+        if (msg.indexOf('Max redirects') > -1) {
+            errored++;
+        }
+    })
+    .done(function () {
+        assert.strictEqual(logged, max);
+        assert.strictEqual(errored, 1);
         assert.done();
-    })
-}
+    });
+};
 
-module.exports.error_parse = function(assert) {
+module.exports.error_parse = function (assert) {
     var tries = 4;
-    osmosis.get(url+'/error-parse')
+
+    osmosis.get(url + '/error-parse')
     .config('tries', tries)
-    .error(function(msg) {
-        if (msg.indexOf('empty') > -1)
+    .error(function (msg) {
+        if (msg.indexOf('empty') > -1 && msg.indexOf('try') > -1) {
             tries--;
+        }
     })
-    .done(function() {
-        assert.ok(tries === 0);
+    .done(function () {
+        assert.strictEqual(tries, 0);
         assert.done();
-    })
-}
+    });
+};
 
 
-server('/', function(url, req, res) {
+server('/', function (url, req, res) {
     if (url.query.redirect !== undefined) {
         res.writeHead(301, { Location: '/redirect' });
         res.end();
         return;
     }
-    res.write('<p>test</p><div>'+JSON.stringify(req.query)+'</div>')
-    res.end();
-})
 
-server('/404', function(url, req, res) {
-    res.writeHead(404)
+    res.write('<p>test</p><div>' + JSON.stringify(req.query) + '</div>');
     res.end();
-})
+});
 
-server('/error-redirect', function(url, req, res) {
-    res.writeHead(301, { Location: '/error-redirect' })
+server('/404', function (url, req, res) {
+    res.writeHead(404);
     res.end();
-})
+});
 
-server('/error-parse', function(url, req, res) {
-    res.writeHead(200)
+server('/error-redirect', function (url, req, res) {
+    res.writeHead(301, { Location: '/error-redirect' });
     res.end();
-})
+});
 
-
-server('/redirect', function(url, req, res) {
-    res.write('<div>/redirect</div>')
+server('/error-parse', function (url, req, res) {
+    res.writeHead(200);
     res.end();
-})
+});
 
-server('/test-test', function(url, req, res) {
-    res.write('<p>success</p>')
+
+server('/redirect', function (url, req, res) {
+    res.write('<div>/redirect</div>');
     res.end();
-})
+});
+
+server('/test-test', function (url, req, res) {
+    res.write('<p>success</p>');
+    res.end();
+});
