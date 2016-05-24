@@ -1,0 +1,10 @@
+{
+    "source": {
+        "include": [ "index.js", "lib" ]
+    },
+    "opts": {
+        "destination": "docs",
+        "recurse": true,
+        "template": "node_modules/ink-docstrap/template"
+    }
+}

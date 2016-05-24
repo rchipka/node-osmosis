@@ -1,14 +1,11 @@
-/*jslint node: true */
 'use strict';
 
-var Command  = require('./lib/Command.js'),
-    needle  = require('needle'),
+var Command = require('./lib/Command.js'),
+    request = require('./lib/Request.js'),
     libxml  = require('libxmljs-dom'),
-    URL     = require('url'),
     instanceId      = 0,
     memoryUsage     = 0,
     cachedSelectors = {},
-
     toMB    = function (size, num) {
         return (size / 1024 / 1024).toFixed(num || 2) + 'Mb';
     },
@@ -28,397 +25,42 @@ var Command  = require('./lib/Command.js'),
 /**
  *
  * Unless called with `new`, Osmosis will start automatically.
- * To start a `new` instance, use `.run()`.
+ * To start an instance created with `new`, use {@link Osmosis.run}.
  *
  * @constructor Osmosis
  *
  * @param {(string|contextCallback)} url - A URL
  * @param {object} [params] - GET query parameters
- * @returns {Command}
- * @see {@link Command.run}
+ * @returns Command
+ * @see Command.run
+ *
+ * @example {@lang javascript}
+ *
+ * // These instances start immediately
+ * osmosis.get('http://example.com');
+ * osmosis('http://example.com');
+ *
+ * // These instances need started
+ * instance = new osmosis.get('http://example.com');
+ * instance.run();
+ *
+ * instance = new osmosis('http://example.com');
+ * instance.run();
  */
 
 function Osmosis(url, params) {
     if (url !== undefined) {
         if (this instanceof Osmosis) {
             return new Osmosis.get(url, params);
-        } else {
-            return Osmosis.get(url, params);
         }
+
+        return Osmosis.get(url, params);
     }
 
     this.queue   = [];
     this.command = new Command(this);
     this.id      = ++instanceId;
 }
-
-/**
- * @name Options
- *
- * @property {string} accept             - HTTP Accept header
- * @property {bool}   compressed         - Compress HTTP requests
- * @property {number} concurrency        - Number of simultaneous HTTP requests
- * @property {bool}   decode_response    - Decode compressed HTTP responses
- * @property {number} follow             - Number of redirects to follow
- * @property {bool}   follow_set_cookies - Set cookies for redirects
- * @property {bool}   follow_set_referer - Set referer header for redirects
- * @memberof Osmosis
- * @default
- */
-
-Osmosis.prototype.opts = {
-    accept:                 'text/html,application/xhtml+xml,' +
-                            'application/xml;q=0.9,*/*;q=0.8',
-    compressed:             true,
-    concurrency:            5,
-    decode_response:        true,
-    follow:                 3,
-    follow_set_cookies:     true,
-    follow_set_referer:     true,
-    keep_data:              false,
-    parse_response:         false,
-    rejectUnauthorized:     false,
-    statsThreshold:         25,
-    timeout:                30 * 1000,
-    tries:                  3,
-    user_agent:             'Mozilla/5.0 (Windows NT x.y; rv:10.0) ' +
-                            'Gecko/20100101 Firefox/10.0'
-};
-
-/**
- * Configure global Osmosis options.
- *
- * @function config
- * @memberof Osmosis
- * @param {string|object} (key|opts) - A string `key` or an object of
- * { key: value } pairs.
- * @param {any} [val] - A value for the `key`
- */
-
-Osmosis.config =
-Osmosis.prototype.config = function (key, val) {
-
-    var opts, hasPrototype = (this.prototype !== undefined);
-
-
-    if (key === undefined) {
-        if (hasPrototype) {
-            return this.prototype.opts;
-        } else {
-            return this.opts;
-        }
-    }
-
-    if (val !== undefined) {
-        opts = {};
-        opts[key] = val;
-    } else if (key !== undefined) {
-        opts = key;
-    }
-
-    for (key in opts) {
-        if (hasPrototype) {
-            this.prototype.opts[key] = opts[key];
-        } else {
-            this.opts[key] = opts[key];
-        }
-    }
-
-};
-
-/**
- * Run (or re-run) an Osmosis instance.
- *
- * If you frequently use the same Osmosis instance
- * (such as in an Express server), it's much more efficient to
- * initialize the instance once and repeatedly use `run` as needed.
- *
- * @borrows Command.run
- */
-Osmosis.prototype.run = function () {
-    var self = this;
-
-    process.nextTick(function () {
-        self.stack.instance = self;
-        self.stack.opts = self.opts;
-        self.started  = true;
-        self.command.start();
-    });
-};
-
-/**
- * Set the parent instance for this instance.
- *
- * Inherit the parent's stack and options
- */
-
-Osmosis.prototype.setParent = function (parent) {
-    this.parent = parent;
-    this.stack  = parent.instance.stack;
-    this.queue  = parent.instance.queue;
-    this.opts   = parent.instance.opts;
-};
-
-/**
- * Resume the current instance.
- *
- * @param {function} callback - A function to call when resuming
- * @borrows Command.resume
- * @private
- */
-
-Osmosis.prototype.resume = function (arg) {
-    var length, i;
-
-    if (typeof arg === 'function') {
-        if (this.resumeQueue === undefined) {
-            this.resumeQueue = [];
-        }
-
-        this.resumeQueue.push(arg);
-    } else {
-        length = this.resumeQueue.length;
-
-        for (i = 0; i < length; ++i) {
-            this.resumeQueue[i]();
-        }
-
-        this.request();
-    }
-};
-
-/**
- * Parse XML/HTML data.
- *
- * @param {string|buffer} data - The data to parse
- * @param {object} opts - libxmljs parse options
- * @protected
- */
-
-Osmosis.prototype.parse = function (data, opts) {
-    /*
-     * We only use `parseHtml` because we need to
-     * avoid libxml namespaces when searching the document.
-     */
-
-    var document = libxml.parseHtml(data, opts);
-
-    if (opts !== undefined && opts.baseUrl !== undefined) {
-        document.location = opts.baseUrl;
-    }
-
-    return document;
-};
-
-/**
- * Add a request to the queue.
- *
- * @param {string} method - HTTP request method
- * @param {string} url - The URL to request
- * @param {object} params - HTTP GET/POST Data
- * @param {object} opts - HTTP request options
- * @param {function} callback - Function to call when done
- * @protected
- */
-
-Osmosis.prototype.queueRequest = function (url,
-                                           opts,
-                                           cb,
-                                           tries) {
-    this.stack.push();
-
-    if (tries === undefined) {
-        tries = opts.tries;
-    }
-
-    this.queue.push([tries, url, opts, cb]);
-
-    this.request();
-};
-
-/**
- * Make an HTTP request.
- *
- * @protected
- */
-
-Osmosis.prototype.request = function () {
-
-    var i           = 0,
-        self        = this,
-        document    = null,
-        arr, tries, method,
-        url, params, opts, cb;
-
-    if (this.queue.length === 0 ||
-        this.stack.requests >= this.opts.concurrency) {
-        return;
-    }
-
-    arr         = this.queue.pop();
-    tries       = arr[i] - 1;
-    url         = arr[++i];
-    opts        = arr[++i];
-    cb          = arr[++i];
-
-    method = url.method;
-    params = url.params;
-
-    this.requests++;
-    this.stack.requests++;
-
-    needle.request(method, url.href, params, opts, function (err, res, data) {
-        self.stack.requests--;
-
-        if (opts.process_response !== undefined) {
-            data = opts.process_response(data);
-        }
-
-
-        if (opts.ignore_http_errors !== true &&
-            res                     !== undefined &&
-            res.statusCode          >=  400   &&
-            res.statusCode          <=  500) {
-            // HTTP error
-            err = res.statusCode + ' ' + res.statusMessage;
-        }
-
-        if (!err && method !== 'head' && (!data || data.length === 0)) {
-            err = 'Data is empty';
-        }
-
-        if (!err && opts.parse !== false) {
-            document = libxml.parseHtml(data,
-                                        { baseUrl: url.href, huge: true });
-        }
-
-        if (document === null) {
-            document = data;
-        } else if (document.errors[0] !== undefined &&
-                  document.errors[0].code === 4) {
-            err = 'Document is empty';
-        } else if (document.root() === null) {
-            err = 'Document has no root';
-        } else {
-            url.method     = method;
-            url.headers    = res.req._headers;
-            url.proxy      = opts.proxy;
-            url.user_agent = opts.user_agent;
-
-            document.location = url;
-            document.request  = url;
-            document.response = {
-                type: (res.headers['content-type'] || ' ')
-                      .indexOf('xml') !== -1 ?
-                      'xml' :
-                      'html',
-                statusCode: res.statusCode,
-                statusMessage: res.statusMessage,
-                headers: res.headers
-            };
-
-            if (res.socket !== undefined) {
-                //url.path    = res.socket._httpMessage.path.replace(/\?$/, '');
-                document.response.size = {
-                    total: res.socket.bytesRead,
-                    headers: res.socket.bytesRead - data.length,
-                    body: data.length
-                };
-            }
-
-            if (self.opts.keep_data === true) {
-                document.response.data = data;
-            }
-
-            if (opts.cookies === undefined) {
-                opts.cookies = {};
-            }
-
-            if (res.cookies !== undefined) {
-                extend(opts.cookies, res.cookies);
-            }
-
-            if (document.cookies === undefined) {
-                document.cookies = {};
-            }
-
-            extend(document.cookies, opts.cookies);
-        }
-
-        if (err !== null) {
-            if (err.message !== undefined) {
-                err = err.message;
-            }
-
-            if (tries > 0) {
-                err += ', trying again';
-
-                self.queueRequest(url, opts, cb, tries);
-
-                if (self.opts.log === true) {
-                    self.command.log(url.href + ' - tries: ' +
-                                    (opts.tries - tries) +
-                                    '/' + opts.tries + '');
-                }
-            }
-        }
-
-        cb(err, res, document, tries === 0);
-
-        self.request();
-    })
-    .on('redirect', function (new_url) {
-        if (self.opts.log === true) {
-            self.command.log('[redirect] ' + url.href + ' -> ' + new_url);
-        }
-
-        url = URL.parse(new_url);
-    });
-};
-
-/**
- * Print Node.JS process statistics via {@link Command.debug}.
- *
- * @protected
- */
-
-Osmosis.prototype.resources = function () {
-    var mem         = process.memoryUsage(),
-        memDiff     = toMB(mem.rss - memoryUsage),
-        libxml_mem  = libxml.memoryUsage(),
-        nodes       = libxml.nodeCount();
-
-    if (this.opts.debug !== true) {
-        this.resources = null;
-        return;
-    }
-
-    if (nodes >= 1000) {
-        nodes = (nodes / 1000).toFixed(0) + 'k';
-    }
-
-    if (memDiff.charAt(0) !== '-') {
-        memDiff = '+' + memDiff;
-    }
-
-    this.command.debug(
-                'stack: '    + this.stack.count + ', ' +
-
-                'requests: ' + this.requests +
-                             ' (' + this.stack.requests + ' queued), ' +
-
-                'RAM: '      + toMB(mem.rss) + ' (' + memDiff + '), ' +
-
-                'libxml: '   + ((libxml_mem / mem.rss) * 100).toFixed(1) +
-                             '% (' + nodes + ' nodes), ' +
-
-                'heap: '     + ((mem.heapUsed / mem.heapTotal) * 100)
-                             .toFixed(0) + '% of ' +
-                             toMB(mem.heapTotal)
-            );
-
-    memoryUsage = mem.rss;
-};
 
 /**
  * Keep track of async operations so we know when to call {@link Command.done}
@@ -460,6 +102,316 @@ Osmosis.prototype.stack = {
         this.change++;
 
         return this.count;
+    }
+};
+
+/**
+ * @name options
+ *
+ * @property {string} accept             - HTTP Accept header
+ * @property {bool}   compressed         - Compress HTTP requests
+ * @property {number} concurrency        - Number of simultaneous HTTP requests
+ * @property {bool}   decode_response    - Decode compressed HTTP responses
+ * @property {number} follow             - Number of redirects to follow
+ * @property {bool}   follow_set_cookies - Set cookies for redirects
+ * @property {bool}   follow_set_referer - Set referer header for redirects
+ * @memberof Osmosis
+ * @instance
+ * @default
+ */
+
+Osmosis.prototype.opts = {
+    accept:                 'text/html,application/xhtml+xml,' +
+                            'application/xml;q=0.9,*/*;q=0.8',
+    compressed:             true,
+    concurrency:            5,
+    decode_response:        true,
+    follow:                 3,
+    follow_set_cookies:     true,
+    follow_set_referer:     true,
+    keep_data:              false,
+    parse_cookies:          true, // Parse "Set-Cookie" header
+    parse_response:         false,
+    rejectUnauthorized:     false,
+    statsThreshold:         25,
+    timeout:                30 * 1000,
+    tries:                  3,
+    user_agent:             'Mozilla/5.0 (Windows NT x.y; rv:10.0) ' +
+                            'Gecko/20100101 Firefox/10.0'
+};
+
+/**
+ * Configure global Osmosis options.
+ *
+ * @function config
+ * @memberof Osmosis
+ * @param {string|object} option - A string `key` or an object of
+ * { key: value } pairs.
+ * @param {any} [value] - A value for the `key`
+ * @instance
+ * @see Command.config
+ * @see Osmosis.options
+ */
+
+Osmosis.config =
+Osmosis.prototype.config = function (option, value) {
+    var hasPrototype = (this.prototype !== undefined),
+        opts, key;
+
+    if (hasPrototype === true) {
+        opts = this.prototype.opts;
+    } else if (this.opts === undefined) {
+        opts = this.opts = {};
+    } else {
+        opts = this.opts;
+    }
+
+    if (option === undefined) {
+        return opts;
+    }
+
+    if (value !== undefined) {
+        opts[option] = value;
+    } else if (key !== undefined) {
+        for (key in option) {
+            opts[key] = option[key];
+        }
+    }
+};
+
+/**
+ * Run (or re-run) an Osmosis instance.
+ *
+ * If you frequently use the same Osmosis instance
+ * (such as in an Express server), it's much more efficient to
+ * initialize the instance once and repeatedly use `run` as needed.
+ *
+ * @borrows Command.run
+ * @see {@link Command.run}
+ */
+Osmosis.prototype.run = function () {
+    var self = this;
+
+    process.nextTick(function () {
+        self.stack.instance = self;
+        self.stack.opts = self.opts;
+        self.started  = true;
+        self.command.start();
+    });
+};
+
+/**
+ * Make an HTTP request.
+ *
+ * @private
+ */
+
+Osmosis.prototype.request = function (url, opts, callback, tries) {
+    var self = this,
+        method = url.method,
+        params = url.params;
+
+    this.requests++;
+    this.stack.requests++;
+    this.stack.push();
+
+    request(url.method,
+            url,
+            url.params,
+            opts,
+            tries,
+            function (err, res, data) {
+                var proxies = opts.proxies;
+
+                self.stack.requests--;
+
+                if ((res === undefined || res.statusCode !== 404) &&
+                    proxies !== undefined) {
+                    self.command.error('proxy ' + (proxies.index + 1) +
+                                        '/' + proxies.length +
+                                        ' failed (' + opts.proxy + ')');
+
+                    // remove the failing proxy
+                    if (proxies.length > 1) {
+                        opts.proxies.splice(proxies.index, 1);
+                        opts.proxy = proxies[proxies.index];
+                    }
+                }
+
+                if (err !== null && tries < opts.tries) {
+                    self.queueRequest(url, opts, callback, tries + 1);
+
+                    if (self.opts.log === true) {
+                        self.command.error(err + ', retrying ' +
+                                        url.href + ' (' +
+                                        (tries + 1) + '/' +
+                                        opts.tries + ')');
+                    }
+                } else {
+                    callback(err, res, data);
+                }
+
+                self.dequeueRequest();
+                self.stack.pop();
+            })
+            .on('redirect', function (new_url) {
+                if (self.opts.log === true) {
+                    self.command.log('[redirect] ' +
+                                     url.href + ' -> ' + new_url);
+                }
+            });
+};
+
+/**
+ * Add a request to the queue.
+ *
+ * @param {string} method - HTTP request method
+ * @param {string} url - The URL to request
+ * @param {object} params - HTTP GET/POST Data
+ * @param {object} opts - HTTP request options
+ * @param {function} callback - Function to call when done
+ * @private
+ */
+
+Osmosis.prototype.queueRequest = function (url,
+                                           opts,
+                                           callback,
+                                           tries) {
+    if (tries === undefined) {
+        tries = 0;
+    }
+
+    if (this.stack.requests < this.opts.concurrency) {
+        this.request(url, opts, callback, tries);
+    } else {
+        this.queue.push([url, opts, callback, tries]);
+    }
+};
+
+Osmosis.prototype.dequeueRequest = function () {
+    var arr, length = this.queue.length;
+
+    if (length === 0 || this.stack.requests >= this.opts.concurrency) {
+        return;
+    }
+
+    arr = this.queue[length - 1];
+
+    this.request(arr[0], arr[1], arr[2], arr[3]);
+
+    this.queue.pop();
+};
+
+/**
+ * Parse XML/HTML data.
+ *
+ * @param {string|buffer} data - The data to parse
+ * @param {object} opts - libxmljs parse options
+ * @private
+ * @see Command.parse
+ */
+
+Osmosis.prototype.parse = function (data, opts) {
+    /*
+     * We only use `parseHtml` because we need to
+     * avoid libxml namespaces when searching the document.
+     */
+
+    var document = libxml.parseHtml(data, opts);
+
+    if (opts !== undefined && opts.baseUrl !== undefined) {
+        document.location = opts.baseUrl;
+    }
+
+    return document;
+};
+
+/**
+ * Print Node.JS process statistics via {@link Command.debug}.
+ *
+ * @private
+ */
+
+Osmosis.prototype.resources = function () {
+    var mem         = process.memoryUsage(),
+        memDiff     = toMB(mem.rss - memoryUsage),
+        libxml_mem  = libxml.memoryUsage(),
+        nodes       = libxml.nodeCount();
+
+    if (this.opts.debug !== true) {
+        this.resources = null;
+
+        return;
+    }
+
+    if (nodes >= 1000) {
+        nodes = (nodes / 1000).toFixed(0) + 'k';
+    }
+
+    if (memDiff.charAt(0) !== '-') {
+        memDiff = '+' + memDiff;
+    }
+
+    this.command.debug(
+                'stack: '    + this.stack.count + ', ' +
+
+                'requests: ' + this.requests +
+                             ' (' + this.stack.requests + ' queued), ' +
+
+                'RAM: '      + toMB(mem.rss) + ' (' + memDiff + '), ' +
+
+                'libxml: '   + ((libxml_mem / mem.rss) * 100).toFixed(1) +
+                             '% (' + nodes + ' nodes), ' +
+
+                'heap: '     + ((mem.heapUsed / mem.heapTotal) * 100)
+                             .toFixed(0) + '% of ' +
+                             toMB(mem.heapTotal)
+            );
+
+    memoryUsage = mem.rss;
+};
+
+/**
+ * Set the parent instance for this instance.
+ *
+ * Inherit the parent's stack and options.
+ *
+ * @private
+ * @param {Command} parent - The parent Command.
+ */
+
+Osmosis.prototype.setParent = function (parent) {
+    this.parent = parent;
+    this.stack  = parent.instance.stack;
+    this.queue  = parent.instance.queue;
+    this.opts   = parent.instance.opts;
+};
+
+/**
+ * Resume the current instance.
+ *
+ * @param {function} callback - A function to call when resuming
+ * @borrows Command.resume
+ * @private
+ */
+
+Osmosis.prototype.resume = function (arg) {
+    var length, i;
+
+    if (typeof arg === 'function') {
+        if (this.resumeQueue === undefined) {
+            this.resumeQueue = [];
+        }
+
+        this.resumeQueue.push(arg);
+    } else {
+        length = this.resumeQueue.length;
+
+        for (i = 0; i < length; ++i) {
+            this.resumeQueue[i]();
+        }
+
+        this.dequeueRequest();
     }
 };
 
@@ -527,6 +479,14 @@ libxml.Element.prototype.find = function (selector) {
  *
  * A CSS/XPath selector
  * @see {@link https://rchipka.github.io/libxmljs-dom/|Selector}
+ */
+
+/**
+ * A callback function that returns the desired value.
+ *
+ * @callback middlewareCallback
+ * @param {context} context - The current XML/HTML context node.
+ * @param {data} data - The current data object.
  */
 
 module.exports = Osmosis;

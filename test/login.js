@@ -1,11 +1,10 @@
-var osmosis = require('../index');
-var server = require('./server');
-var URL = require('url');
-var fs = require('fs');
-
-var url = server.host + ':' + server.port;
-var user = 'user';
-var pass = 'pass';
+var osmosis = require('../index'),
+    server = require('./server'),
+    URL = require('url'),
+    fs = require('fs'),
+    url = server.host + ':' + server.port,
+    user = 'user',
+    pass = 'pass';
 
 module.exports.form = function (assert) {
     var errors = 0;

@@ -1,3 +1,8 @@
-[submodule "osmosis.github.io"]
-    path = docs
-    url  = https://github.com/rc0x03/osmosis.github.io
+[submodule "docs"]
+	path = docs
+	url = ./docs
+	branch = gh-pages
+[submodule "gh-pages"]
+	path = docs
+	url = ./docs
+	branch = gh-pages
