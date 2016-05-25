@@ -1,8 +1,0 @@
-[submodule "docs"]
-	path = docs
-	url = ./docs
-	branch = gh-pages
-[submodule "gh-pages"]
-	path = docs
-	url = ./docs
-	branch = gh-pages
