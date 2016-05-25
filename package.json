@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "needle": "1.0.0",
-    "libxmljs-dom": "0.0.7"
+    "libxmljs-dom": "0.0.6"
   },
   "devDependencies": {
     "jscs": ">=3.0.2",
@@ -33,7 +33,7 @@
   "license": "MIT",
   "main": "index",
   "engines": {
-    "node": ">= 0.10.x"
+    "node": ">= 0.8.0"
   },
   "readmeFilename": "Readme.md",
   "bugs": {
