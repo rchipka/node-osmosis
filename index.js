@@ -32,7 +32,7 @@ var Command = require('./lib/Command.js'),
  * @param {(string|contextCallback)} url - A URL
  * @param {object} [params] - GET query parameters
  * @returns Command
- * @see Command.run
+ * @see {@link Command.run}
  *
  * @example {@lang javascript}
  *
@@ -108,6 +108,8 @@ Osmosis.prototype.stack = {
 /**
  * @name options
  *
+ * Osmosis and {@link https://github.com/tomas/needle|needle} options.
+ *
  * @property {string} accept             - HTTP Accept header
  * @property {bool}   compressed         - Compress HTTP requests
  * @property {number} concurrency        - Number of simultaneous HTTP requests
@@ -115,6 +117,11 @@ Osmosis.prototype.stack = {
  * @property {number} follow             - Number of redirects to follow
  * @property {bool}   follow_set_cookies - Set cookies for redirects
  * @property {bool}   follow_set_referer - Set referer header for redirects
+ * @property {bool}   keep_data          - Keep raw HTTP data in
+                                           context.response.data
+ * @property {bool}   timeout            - HTTP request timeout
+ * @property {bool}   tries              - HTTP request retries
+ * @property {bool}   user_agent         - HTTP user agent
  * @memberof Osmosis
  * @instance
  * @default
@@ -149,8 +156,8 @@ Osmosis.prototype.opts = {
  * { key: value } pairs.
  * @param {any} [value] - A value for the `key`
  * @instance
- * @see Command.config
- * @see Osmosis.options
+ * @see {@link Command.config}
+ * @see {@link Osmosis.options}
  */
 
 Osmosis.config =
@@ -473,14 +480,14 @@ libxml.Element.prototype.find = function (selector) {
  * @typedef {object} data
  *
  * An object containing values set by `.set`
- * @see Command.set
+ * @see {@link Command.set}
  */
 
 /**
  * @typedef {string} Selector
  *
  * A CSS/XPath selector
- * @see {@link https://rchipka.github.io/libxmljs-dom/|Selector}
+ * @see {@link https://github.com/css2xpath/css2xpath|Selectors}
  */
 
 /**
