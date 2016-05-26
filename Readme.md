@@ -76,7 +76,7 @@ For documentation and examples check out [https://rchipka.github.com/node-osmosi
 
 ##Dependencies
 
-- [libxmljs-dom](https://github.com/rchipka/libxmljs-dom) - DOM wrapper for [libxmljs](https://github.com/polotek/libxmljs) C bindings
+- [libxmljs-dom](https://github.com/rchipka/node-libxmljs-dom) - DOM wrapper for [libxmljs](https://github.com/libxmljs/libxmljs) C bindings
 - [needle](https://github.com/tomas/needle) - Lightweight HTTP wrapper
 
 ##Donate
