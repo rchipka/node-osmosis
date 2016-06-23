@@ -1,8 +1,9 @@
 'use strict';
 
-var Command = require('./lib/Command.js'),
-    request = require('./lib/Request.js'),
-    libxml  = require('libxmljs-dom'),
+var Command     = require('./lib/Command.js'),
+    request     = require('./lib/Request.js'),
+    libxml      = require('libxmljs-dom'),
+    RateLimiter = require('limiter').RateLimiter,
     instanceId      = 0,
     memoryUsage     = 0,
     cachedSelectors = {},
@@ -57,9 +58,10 @@ function Osmosis(url, params) {
         return Osmosis.get(url, params);
     }
 
-    this.queue   = [];
-    this.command = new Command(this);
-    this.id      = ++instanceId;
+    this.queue    = [];
+    this.command  = new Command(this);
+    this.id       = ++instanceId;
+    this.throttle = new RateLimiter(999999, 1000);
 }
 
 /**
@@ -221,54 +223,60 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
     this.requests++;
     this.stack.requests++;
     this.stack.push();
+    
+    this.throttle.removeTokens(1, function(err, remainingRequests) {
+        if (remainingRequests < 0) {
+            return self.queueRequest(url, opts, callback, tries);
+        }
 
-    request(url.method,
-            url,
-            url.params,
-            opts,
-            tries,
-            function (err, res, data) {
-                var proxies = opts.proxies;
+        request(url.method,
+                url,
+                url.params,
+                opts,
+                tries,
+                function (err, res, data) {
+                    var proxies = opts.proxies;
 
-                self.stack.requests--;
+                    self.stack.requests--;
 
-                if ((res === undefined || res.statusCode !== 404) &&
-                    proxies !== undefined) {
-                    self.command.error('proxy ' + (proxies.index + 1) +
-                                        '/' + proxies.length +
-                                        ' failed (' + opts.proxy + ')');
+                    if ((res === undefined || res.statusCode !== 404) &&
+                        proxies !== undefined) {
+                        self.command.error('proxy ' + (proxies.index + 1) +
+                                            '/' + proxies.length +
+                                            ' failed (' + opts.proxy + ')');
 
-                    // remove the failing proxy
-                    if (proxies.length > 1) {
-                        opts.proxies.splice(proxies.index, 1);
-                        opts.proxy = proxies[proxies.index];
+                        // remove the failing proxy
+                        if (proxies.length > 1) {
+                            opts.proxies.splice(proxies.index, 1);
+                            opts.proxy = proxies[proxies.index];
+                        }
                     }
-                }
 
-                if (err !== null && tries < opts.tries) {
-                    self.queueRequest(url, opts, callback, tries + 1);
+                    if (err !== null && tries < opts.tries) {
+                        self.queueRequest(url, opts, callback, tries + 1);
 
+                        if (self.opts.log === true) {
+                            self.command.error(err + ', retrying ' +
+                                            url.href + ' (' +
+                                            (tries + 1) + '/' +
+                                            opts.tries + ')');
+                        }
+                    } else {
+                        callback(err, res, data);
+                    }
+
+                    self.dequeueRequest();
+                    self.stack.pop();
+                })
+                .on('redirect', function (new_url) {
                     if (self.opts.log === true) {
-                        self.command.error(err + ', retrying ' +
-                                        url.href + ' (' +
-                                        (tries + 1) + '/' +
-                                        opts.tries + ')');
+                        self.command.log('[redirect] ' +
+                                         url.href + ' -> ' + new_url);
                     }
-                } else {
-                    callback(err, res, data);
-                }
 
-                self.dequeueRequest();
-                self.stack.pop();
-            })
-            .on('redirect', function (new_url) {
-                if (self.opts.log === true) {
-                    self.command.log('[redirect] ' +
-                                     url.href + ' -> ' + new_url);
-                }
-
-                url.href = new_url;
-            });
+                    url.href = new_url;
+                });
+    });
 };
 
 /**
