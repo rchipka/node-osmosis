@@ -1,9 +1,10 @@
 'use strict';
 
-var Command = require('./lib/Command.js'),
-    Queue   = require('./lib/Queue.js'),
-    request = require('./lib/Request.js'),
-    libxml  = require('libxmljs-dom'),
+var Command     = require('./lib/Command.js'),
+    Queue       = require('./lib/Queue.js'),
+    request     = require('./lib/Request.js'),
+    libxml      = require('libxmljs-dom'),
+    RateLimiter = require('limiter').RateLimiter,
     instanceId      = 0,
     memoryUsage     = 0,
     cachedSelectors = {},
@@ -58,9 +59,10 @@ function Osmosis(url, params) {
         return Osmosis.get(url, params);
     }
 
-    this.queue   = new Queue(this);
-    this.command = new Command(this);
-    this.id      = ++instanceId;
+    this.queue    = new Queue(this);
+    this.command  = new Command(this);
+    this.id       = ++instanceId;
+    this.throttle = new RateLimiter(999, 1, true);
 }
 
 
@@ -147,7 +149,7 @@ Osmosis.prototype.config = function (option, value) {
 
 /**
  * Run (or re-run) an Osmosis instance.
- *g
+ *
  * If you frequently use the same Osmosis instance
  * (such as in an Express server), it's much more efficient to
  * initialize the instance once and repeatedly use `run` as needed.
@@ -184,6 +186,7 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
         opts.user_agent = opts.user_agent();
     }
 
+    this.throttle.removeTokens(1, function(err, remainingRequests) {
     request(url.method,
             url,
             url.params,
@@ -229,6 +232,7 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
                                      href + ' -> ' + new_url);
                 }
             });
+    });
 };
 
 /**
@@ -324,6 +328,8 @@ Osmosis.prototype.resources = function () {
 
                 'requests: ' + this.requests +
                              ' (' + this.queue.requests + ' queued), ' +
+
+                'tokens: ' + parseInt(this.throttle.getTokensRemaining()) + ', ' +
 
                 'RAM: '      + toMB(mem.rss) + ' (' + memDiff + '), ' +
 

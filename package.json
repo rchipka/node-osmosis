@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "libxmljs-dom": "~0.0.11",
+    "limiter": "^1.1.0",
     "needle": "^1.6.0"
   },
   "devDependencies": {
