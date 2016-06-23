@@ -61,7 +61,7 @@ function Osmosis(url, params) {
     this.queue    = [];
     this.command  = new Command(this);
     this.id       = ++instanceId;
-    this.throttle = new RateLimiter(999999, 1000);
+    this.throttle = new RateLimiter(999, 1, true);
 }
 
 /**
@@ -225,10 +225,6 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
     this.stack.push();
     
     this.throttle.removeTokens(1, function(err, remainingRequests) {
-        if (remainingRequests < 0) {
-            return self.queueRequest(url, opts, callback, tries);
-        }
-
         request(url.method,
                 url,
                 url.params,
@@ -374,6 +370,8 @@ Osmosis.prototype.resources = function () {
 
                 'requests: ' + this.requests +
                              ' (' + this.stack.requests + ' queued), ' +
+
+                'tokens: ' + parseInt(this.throttle.getTokensRemaining()) + ', ' +
 
                 'RAM: '      + toMB(mem.rss) + ' (' + memDiff + '), ' +
 
