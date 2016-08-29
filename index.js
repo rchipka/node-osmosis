@@ -1,6 +1,7 @@
 'use strict';
 
 var Command = require('./lib/Command.js'),
+    Queue   = require('./lib/Queue.js'),
     request = require('./lib/Request.js'),
     libxml  = require('libxmljs-dom'),
     instanceId      = 0,
@@ -57,53 +58,11 @@ function Osmosis(url, params) {
         return Osmosis.get(url, params);
     }
 
-    this.queue   = [];
+    this.queue   = new Queue(this);
     this.command = new Command(this);
     this.id      = ++instanceId;
 }
 
-/**
- * Keep track of async operations so we know when to call {@link Command.done}
- * @private
- */
-
-Osmosis.prototype.stack = {
-    change:     0,
-    count:      0,
-    done:       0,
-    requests:   0,
-    push: function () {
-        if (++this.change >= 25) {
-            if (this.instance.resources !== null) {
-                this.instance.resources();
-            }
-
-            this.change = 0;
-        }
-
-        return ++this.count;
-    },
-    pop: function () {
-        var self = this;
-
-        process.nextTick(function () {
-            var instance;
-
-            if (--self.count === 0) {
-                instance = self.instance;
-                instance.command.done();
-
-                if (instance.opts.debug === true) {
-                    instance.resources();
-                }
-            }
-        });
-
-        this.change++;
-
-        return this.count;
-    }
-};
 
 /**
  * @name options
@@ -188,7 +147,7 @@ Osmosis.prototype.config = function (option, value) {
 
 /**
  * Run (or re-run) an Osmosis instance.
- *
+ *g
  * If you frequently use the same Osmosis instance
  * (such as in an Express server), it's much more efficient to
  * initialize the instance once and repeatedly use `run` as needed.
@@ -200,8 +159,6 @@ Osmosis.prototype.run = function () {
     var self = this;
 
     process.nextTick(function () {
-        self.stack.instance = self;
-        self.stack.opts = self.opts;
         self.started  = true;
         self.command.start();
     });
@@ -219,8 +176,8 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
         params = url.params;
 
     this.requests++;
-    this.stack.requests++;
-    this.stack.push();
+    this.queue.requests++;
+    this.queue.push();
 
     request(url.method,
             url,
@@ -230,7 +187,7 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
             function (err, res, data) {
                 var proxies = opts.proxies;
 
-                self.stack.requests--;
+                self.queue.requests--;
 
                 if ((res === undefined || res.statusCode !== 404) &&
                     proxies !== undefined) {
@@ -259,7 +216,7 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
                 }
 
                 self.dequeueRequest();
-                self.stack.pop();
+                self.queue.pop();
             })
             .on('redirect', function (new_url) {
                 if (self.opts.log === true) {
@@ -290,25 +247,23 @@ Osmosis.prototype.queueRequest = function (url,
         tries = 0;
     }
 
-    if (this.stack.requests < this.opts.concurrency) {
+    if (this.queue.requests < this.opts.concurrency) {
         this.request(url, opts, callback, tries);
     } else {
-        this.queue.push([url, opts, callback, tries]);
+        this.queue.enqueue([url, opts, callback, tries]);
     }
 };
 
 Osmosis.prototype.dequeueRequest = function () {
     var arr, length = this.queue.length;
 
-    if (length === 0 || this.stack.requests >= this.opts.concurrency) {
+    if (length === 0 || this.queue.requests >= this.opts.concurrency) {
         return;
     }
 
-    arr = this.queue[length - 1];
+    arr = this.queue.dequeue();
 
     this.request(arr[0], arr[1], arr[2], arr[3]);
-
-    this.queue.pop();
 };
 
 /**
@@ -362,10 +317,10 @@ Osmosis.prototype.resources = function () {
     }
 
     this.command.debug(
-                'stack: '    + this.stack.count + ', ' +
+                'stack: '    + this.queue.count + ', ' +
 
                 'requests: ' + this.requests +
-                             ' (' + this.stack.requests + ' queued), ' +
+                             ' (' + this.queue.requests + ' queued), ' +
 
                 'RAM: '      + toMB(mem.rss) + ' (' + memDiff + '), ' +
 
@@ -383,7 +338,7 @@ Osmosis.prototype.resources = function () {
 /**
  * Set the parent instance for this instance.
  *
- * Inherit the parent's stack and options.
+ * Inherit the parent's queue and options.
  *
  * @private
  * @param {Command} parent - The parent Command.
@@ -391,7 +346,6 @@ Osmosis.prototype.resources = function () {
 
 Osmosis.prototype.setParent = function (parent) {
     this.parent = parent;
-    this.stack  = parent.instance.stack;
     this.queue  = parent.instance.queue;
     this.opts   = parent.instance.opts;
 };

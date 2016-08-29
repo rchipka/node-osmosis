@@ -8,7 +8,7 @@ var http = require('http'),
 
 server = http.createServer(function (req, res) {
     var url = URL.parse(req.url, true),
-        uri = url.pathname,
+        uri = decodeURIComponent(url.pathname),
         postData = '';
 
     if (paths[uri] !== undefined) {
@@ -37,6 +37,10 @@ server.on('error', function () {
 server.listen(port);
 
 module.exports = function (path, cb) {
+    if (paths[path]) {
+        throw new Error("Path " + path + " exists");
+    }
+
     paths[path] = cb;
 };
 

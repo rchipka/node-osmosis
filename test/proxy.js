@@ -32,7 +32,7 @@ for (var port = 8080; port < 8090; port++) {
 }
 
 module.exports.config = function (assert) {
-    osmosis.get(url)
+    osmosis.get(url + '/proxy')
     .config('proxy', '127.0.0.1:8080')
     .then(function (context) {
         assert.ok(context.get('div').text() == '8080');
@@ -43,7 +43,7 @@ module.exports.config = function (assert) {
 };
 
 module.exports.macro = function (assert) {
-    osmosis.get(url)
+    osmosis.get(url + '/proxy')
     .proxy('127.0.0.1:8080')
     .then(function (context) {
         assert.ok(context.get('div').text() == '8080');
@@ -60,13 +60,13 @@ module.exports.multiple = function (assert) {
         p.push('localhost:' + proxy.address().port);
     });
 
-    osmosis.get(url)
+    osmosis.get(url + '/proxy')
     .config('tries', p.length)
     .proxy(p)
     .then(function (context) {
         assert.equal(context.get('div').text(), '8080');
     })
-    .get('/?err=true')
+    .get('/proxy?err=true')
     .done(function () {
         assert.equal(p.length, 1);
         proxies.forEach(function (proxy) {
@@ -76,7 +76,7 @@ module.exports.multiple = function (assert) {
     });
 };
 
-server('/', function (url, req, res) {
+server('/proxy', function (url, req, res) {
     if (url.query.err !== undefined) {
         res.writeHead(500);
         res.end();
