@@ -6,13 +6,13 @@ var osmosis = require('../index'),
 module.exports.selector_array = function (assert) {
     var count = 0;
 
-    osmosis.get(url)
+    osmosis.get(url + '/find')
     .find(['img', 'b'])
     .then(function () {
         count++;
     })
     .done(function () {
-        assert.ok(count === 7);
+        assert.equal(count, 7);
         assert.done();
     });
 };
@@ -20,13 +20,13 @@ module.exports.selector_array = function (assert) {
 module.exports.selector_css = function (assert) {
     var count = 0;
 
-    osmosis.get(url)
+    osmosis.get(url + '/find')
     .find('.content ul:not([name]) li[2] b:last img')
     .then(function (context) {
         assert.ok(++count == context.getAttribute('src'));
     })
     .done(function () {
-        assert.ok(count == 3);
+        assert.equal(count, 3);
         assert.done();
     });
 };
@@ -34,7 +34,7 @@ module.exports.selector_css = function (assert) {
 module.exports.nested = function (assert) {
     var calledThen = true;
 
-    osmosis.get(url)
+    osmosis.get(url + '/find')
     .find('ul:last')
     .set({
         'b': osmosis.find('b')
@@ -52,14 +52,14 @@ module.exports.nested = function (assert) {
 module.exports.select = function (assert) {
     var count = 0;
 
-    osmosis.get(url)
+    osmosis.get(url + '/find')
     .find('ul:last > li:last')
     .select('b')
     .then(function () {
         count++;
     })
     .done(function () {
-        assert.ok(count == 2);
+        assert.equal(count, 2);
         assert.done();
     });
 };
@@ -67,13 +67,13 @@ module.exports.select = function (assert) {
 module.exports.xpath = function (assert) {
     var count = 0;
 
-    osmosis.get(url)
+    osmosis.get(url + '/find')
     .find('//div[@class]/ul[2]/li')
     .then(function () {
         count++;
     })
     .done(function () {
-        assert.ok(count == 2);
+        assert.equal(count, 2);
         assert.done();
     });
 };
@@ -81,18 +81,18 @@ module.exports.xpath = function (assert) {
 module.exports.both = function (assert) {
     var count = 0;
 
-    osmosis.get(url)
+    osmosis.get(url + '/find')
     .find('.content//preceding::[@name]')
     .then(function () {
         count++;
     })
     .done(function () {
-        assert.ok(count == 1);
+        assert.equal(count, 1);
         assert.done();
     });
 };
 
-server('/', function (url, req, res) {
+server('/find', function (url, req, res) {
     res.setHeader("Content-Type", "text/html");
     res.write('<body>\
                 <div class="content">\

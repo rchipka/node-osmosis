@@ -30,8 +30,9 @@ module.exports.multiple = function (assert) {
                     count++;
                 })
                 .done(function () {
-                    assert.equal(count, 2);
-                    assert.done();
+                    if (count === 2) {
+                        assert.done();
+                    }
                 });
 
     r1 = instance.run();

@@ -7,7 +7,7 @@ var osmosis = require('../index'),
 module.exports.href = function (assert) {
     var count = 0;
 
-    osmosis.get(url)
+    osmosis.get(url + '/follow')
     .follow('li:skip-last > a')
     .then(function (context) {
         assert.ok(context.request.headers.referer);
@@ -24,7 +24,7 @@ module.exports.href = function (assert) {
 module.exports.delay = function (assert) {
     var count = 0;
 
-    osmosis.get(url)
+    osmosis.get(url + '/follow')
     .find('li:skip-last > a')
     .delay(0.2)
     .follow('@href')
@@ -42,8 +42,8 @@ module.exports.delay = function (assert) {
 /*
 module.exports.not_found = function(assert) {
     var count = 0;
-    osmosis.get(url)
-    .follow('a@href', false, function(url) {
+    osmosis.get(url + '/follow')
+    .follow('a@href', false, function(url + '/follow') {
         return '/404'
     })
     .then(function(context, data) {
@@ -59,7 +59,7 @@ module.exports.not_found = function(assert) {
 module.exports.internal = function (assert) {
     var count = 0;
 
-    osmosis.get(url)
+    osmosis.get(url + '/follow')
     .follow('li > a:internal')
     .then(function (context) {
         count++;
@@ -72,13 +72,28 @@ module.exports.internal = function (assert) {
     });
 };
 
+module.exports.unicode = function (assert) {
+    var calledThen = false;
+
+    osmosis.get(url + '/follow-utf8')
+    .follow('a')
+    .then(function (context) {
+        assert.equal(context.get('div').textContent, 'true');
+        calledThen = true;
+    })
+    .done(function () {
+        assert.ok(calledThen);
+        assert.done();
+    })
+}
+
 /*
  * DEPRECATED. Use .find(selector).get(callback) instead.
 
 module.exports.rewrite = function (assert) {
     var count = 0;
 
-    osmosis.get(url)
+    osmosis.get(url + '/follow')
     .follow('a:internal')
     .rewrite(function () {
         return '/?page=1';
@@ -96,7 +111,7 @@ module.exports.rewrite = function (assert) {
 // TODO: actually save
 /*
 module.exports.save = function (assert) {
-    osmosis.get(url)
+    osmosis.get(url + '/follow')
     .follow('a:last')
     .then(function () {
         assert.ok(true);
@@ -106,7 +121,19 @@ module.exports.save = function (assert) {
     });
 };*/
 
-server('/', function (url, req, res) {
+server('/follow-utf8', function (url, req, res) {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.write('<a href="/समाज-विश्व/test/test%20test test">समाज-विश्व</a>');
+    res.end();
+});
+
+server('/समाज-विश्व/test/test test test', function (url, req, res) {
+    res.setHeader("Content-Type", "text/html");
+    res.write('<div>true</div>');
+    res.end();
+});
+
+server('/follow', function (url, req, res) {
     res.setHeader("Content-Type", "text/html");
 
     if (url.query.page) {
