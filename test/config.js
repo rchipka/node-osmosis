@@ -148,14 +148,18 @@ module.exports.headers = function (assert) {
 };
 
 module.exports.rewrite = function (assert) {
+    var calledThen = false;
+
     osmosis
     .get(function () {
         return url + '/headers';
     })
     .then(function (context) {
         assert.equal(context.find('host').length, 1);
+        calledThen = true;
     })
     .done(function () {
+        assert.ok(calledThen);
         assert.done();
     });
 };

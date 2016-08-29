@@ -71,7 +71,7 @@ var osmosis = require('../index'),
 module.exports.array_root = function (assert) {
     var calledThen = false, calledData = false;
 
-    osmosis.get(url)
+    osmosis.get(url + '/set')
     .set([
         'a@href',
         osmosis.find('a').set('name').set('href', '@href'),
@@ -95,7 +95,7 @@ module.exports.array_root = function (assert) {
 module.exports.callbacks = function (assert) {
     var calledThen = false, calledData = false;
 
-    osmosis.get(url)
+    osmosis.get(url + '/set')
     .set({
         links: osmosis.find('a')
                 .set('link', function (link) {
@@ -125,7 +125,7 @@ module.exports.callbacks = function (assert) {
 module.exports.nested = function (assert) {
     var calledThen = false, calledData = false;
 
-    osmosis.get(url)
+    osmosis.get(url + '/set')
     .set({
         title: 'title',
         content: '#content',
@@ -215,7 +215,7 @@ module.exports.nested = function (assert) {
     });
 };
 
-server('/', function (url, req, res) {
+server('/set', function (url, req, res) {
     res.setHeader("Content-Type", "text/html");
     res.write('<head><title>TITLE</title></head><body>' +
               '<div id="content">CONTENT</div>' +

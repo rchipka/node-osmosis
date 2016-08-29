@@ -8,7 +8,7 @@ var url = server.host + ':' + server.port;
 module.exports.form1 = function (assert) {
     var calledThen = false;
 
-    osmosis.get(url + '/form')
+    osmosis.get(url + '/submit-form')
     .submit('form')
     .then(function (context) {
         calledThen = true;
@@ -23,7 +23,7 @@ module.exports.form1 = function (assert) {
 module.exports.form2 = function (assert) {
     var calledThen = false;
 
-    osmosis.get(url + '/form')
+    osmosis.get(url + '/submit-form')
     .submit('form[2]')
     .then(function (context) {
         calledThen = true;
@@ -38,7 +38,7 @@ module.exports.form2 = function (assert) {
 module.exports.button = function (assert) {
     var calledThen = false;
 
-    osmosis.get(url + '/form')
+    osmosis.get(url + '/submit-form')
     .submit('form:first [name="sub2"]')
     .then(function (context) {
         calledThen = true;
@@ -55,7 +55,7 @@ module.exports.form_attr = function (assert) {
     var inputs = getInputs(1);
 
     inputs['sub2'] = 'Submit Query';
-    osmosis.get(url + '/form')
+    osmosis.get(url + '/submit-form')
     .submit('form[2] [name="sub2"]')
     .then(function (context) {
         calledThen = true;
@@ -70,7 +70,7 @@ module.exports.form_attr = function (assert) {
 module.exports.multipart = function (assert) {
     var calledThen = false;
 
-    osmosis.get(url + '/form')
+    osmosis.get(url + '/submit-form')
     .submit('form[2] [name="sub3"]', { image: { file: __dirname + '/submit.js', content_type: 'application/javascript' } })
     .then(function (context) {
         calledThen = true;
@@ -172,7 +172,7 @@ var inputs2 = {
     }
 };
 
-server('/form', function (url, req, res, data) {
+server('/submit-form', function (url, req, res, data) {
     res.setHeader("Content-Type", "text/html");
     var out = '';
 

@@ -6,7 +6,7 @@ var osmosis = require('../index'),
 
 
 module.exports.function_url = function (assert) {
-    osmosis.get(url)
+    osmosis.get(url + '/get')
     .then(function (context, data, next) {
         data.name = 'test';
         next(context, data);
@@ -26,7 +26,7 @@ module.exports.redirect = function (assert) {
     var calledThen = false,
         logged = false;
 
-    osmosis.get(url + '/?redirect=true')
+    osmosis.get(url + '/get?redirect=true')
     .then(function (context) {
         calledThen = true;
         assert.ok(context.request.headers.referer.length > 0);
@@ -49,7 +49,7 @@ module.exports.redirect = function (assert) {
 module.exports.error_404 = function (assert) {
     var tries = 5, tried = 0;
 
-    osmosis.get(url + '/404')
+    osmosis.get(url + '/get-404')
     .config('ignore_http_errors', false)
     .config('tries', tries)
     .error(function (msg) {
@@ -102,19 +102,57 @@ module.exports.error_parse = function (assert) {
     });
 };
 
+module.exports.multiple = function (assert) {
+    var totalRequests = 15,
+        requests = totalRequests,
+        results = [],
+        done = false,
+        timeout;
 
-server('/', function (url, req, res) {
+    while (requests--) {
+        osmosis.get(url + '/get?count=' + requests)
+            .set('div', 'div')
+            .data(function (data) {
+                var key = JSON.parse(data.div).count;
+
+                if (results.indexOf(key) === -1) {
+                    results.push(key);
+                }
+            })
+            .done(function () {
+                if (results.length === totalRequests) {
+                    clearTimeout(timeout);
+                    if (done === false) {
+                        assert.done();
+                        done = true;
+                    }
+                }
+            });
+    }
+
+    timeout = setTimeout(function () {
+        console.log(results);
+        assert.equal(results.length, totalRequests);
+        if (done === false) {
+            assert.done();
+            done = true;
+        }
+    }, 5000);
+}
+
+
+server('/get', function (url, req, res) {
     if (url.query.redirect !== undefined) {
         res.writeHead(301, { Location: '/redirect' });
         res.end();
         return;
     }
 
-    res.write('<p>test</p><div>' + JSON.stringify(req.query) + '</div>');
+    res.write('<p>test</p><div>' + JSON.stringify(url.query) + '</div>');
     res.end();
 });
 
-server('/404', function (url, req, res) {
+server('/get-404', function (url, req, res) {
     res.writeHead(404);
     res.end();
 });
