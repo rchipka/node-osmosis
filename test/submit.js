@@ -5,6 +5,11 @@ var URL = require('url');
 
 var url = server.host + ':' + server.port;
 
+/*
+ * TODO: Add radio button tests
+ *       Add input[name] case-insensitivity tests
+ */
+
 module.exports.form1 = function (assert) {
     var calledThen = false;
 
