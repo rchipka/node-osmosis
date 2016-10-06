@@ -223,8 +223,6 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
                     self.command.log('[redirect] ' +
                                      url.href + ' -> ' + new_url);
                 }
-
-                url.href = new_url;
             });
 };
 
