@@ -79,7 +79,7 @@ function Osmosis(url, params) {
  * @property {bool}   keep_data          - Keep raw HTTP data in
                                            context.response.data
  * @property {bool}   timeout            - HTTP request timeout
- * @property {bool}   tries              - HTTP request retries
+ * @property {bool}   tries              - HTTP request attempts
  * @property {bool}   user_agent         - HTTP user agent
  * @memberof Osmosis
  * @instance
@@ -202,8 +202,8 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
                     }
                 }
 
-                if (err !== null && tries < opts.tries) {
-                    self.queueRequest(url, opts, callback, tries + 1);
+                if (err !== null && ++tries < opts.tries) {
+                    self.queueRequest(url, opts, callback, tries);
 
                     if (self.opts.log === true) {
                         self.command.error(err + ', retrying ' +

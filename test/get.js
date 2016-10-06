@@ -53,7 +53,7 @@ module.exports.error_404 = function (assert) {
     .config('ignore_http_errors', false)
     .config('tries', tries)
     .error(function (msg) {
-        if (msg.indexOf('404') > -1 && msg.indexOf('try') > -1) {
+        if (msg.indexOf('404') > -1) {
             tried++;
         }
     })
@@ -92,7 +92,7 @@ module.exports.error_parse = function (assert) {
     osmosis.get(url + '/error-parse')
     .config('tries', tries)
     .error(function (msg) {
-        if (msg.indexOf('empty') > -1 && msg.indexOf('try') > -1) {
+        if (msg.indexOf('empty') > -1) {
             tries--;
         }
     })

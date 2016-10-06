@@ -1,6 +1,6 @@
 {
   "name": "osmosis",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Web scraper for NodeJS",
   "keywords": [
     "web",
@@ -20,8 +20,8 @@
     "email": "chipka01@email.franklin.edu"
   },
   "dependencies": {
-    "needle": "1.0.0",
-    "libxmljs-dom": "0.0.7"
+    "needle": "1.1.2",
+    "libxmljs-dom": "0.0.8"
   },
   "devDependencies": {
     "jscs": ">=3.0.2",
