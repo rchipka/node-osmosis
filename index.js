@@ -172,6 +172,7 @@ Osmosis.prototype.run = function () {
 
 Osmosis.prototype.request = function (url, opts, callback, tries) {
     var self = this,
+        href   = url.href,
         method = url.method,
         params = url.params;
 
@@ -221,7 +222,7 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
             .on('redirect', function (new_url) {
                 if (self.opts.log === true) {
                     self.command.log('[redirect] ' +
-                                     url.href + ' -> ' + new_url);
+                                     href + ' -> ' + new_url);
                 }
             });
 };
