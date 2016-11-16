@@ -108,8 +108,7 @@ module.exports.instance_cookies = function (assert) {
         .data(function (data) {
             assert.deepEqual(parseCookies(data.get_cookies), expected);
             assert.deepEqual(data.follow_cookies, expected);
-            // Not yet supported by Needle
-            // expected.testSetCookie1 = 'true';
+            expected.testSetCookie1 = 'true';
             expected.testSetCookie2 = 'true';
             assert.deepEqual(parseCookies(data.post_cookies), expected);
             assert.deepEqual(data.set_cookies, expected);
