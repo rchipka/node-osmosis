@@ -72,7 +72,7 @@ osmosis
 
 ##Documentation
 
-For documentation and examples check out [https://rchipka.github.com/node-osmosis/](https://rchipka.github.com/node-osmosis/)
+For documentation and examples check out [https://rchipka.github.io/node-osmosis/global.html](https://rchipka.github.io/node-osmosis/global.html)
 
 ##Dependencies
 
