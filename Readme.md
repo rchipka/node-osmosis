@@ -1,4 +1,4 @@
-#Osmosis
+# Osmosis
 
 HTML/XML parser and web scraper for NodeJS.
 
@@ -8,7 +8,7 @@ HTML/XML parser and web scraper for NodeJS.
 
 ![Downloads](https://img.shields.io/npm/dm/osmosis.svg)
 
-##Features
+## Features
 
 - Uses native libxml C bindings
 - Clean promise-like interface
@@ -37,7 +37,7 @@ HTML/XML parser and web scraper for NodeJS.
     - Single proxy or multiple proxies and handles proxy failure
     - Retries and redirect limits
 
-##Example
+## Example
 
 ```javascript
 var osmosis = require('osmosis');
@@ -70,21 +70,21 @@ osmosis
 .debug(console.log)
 ```
 
-##Documentation
+## Documentation
 
 For documentation and examples check out [https://rchipka.github.io/node-osmosis/global.html](https://rchipka.github.io/node-osmosis/global.html)
 
-##Dependencies
+## Dependencies
 
 - [libxmljs-dom](https://github.com/rchipka/node-libxmljs-dom) - DOM wrapper for [libxmljs](https://github.com/libxmljs/libxmljs) C bindings
 - [needle](https://github.com/tomas/needle) - Lightweight HTTP wrapper
 
-##Donate
+## Donate
 
 Please consider a donation if you depend on web scraping and Osmosis makes your job a bit easier.
 Your contribution allows me to spend more time making this the best web scraper for Node.
 
-###Donation offers:
+### Donation offers:
 
  - $25 - A custom Osmosis scraper to extract the data you need efficiently and in as few lines of code as possible.
  - $25/month - Become a sponsor. Your company will be listed on this page. Priority support and bug fixes.
