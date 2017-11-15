@@ -145,7 +145,7 @@ module.exports.absentQueryString = function (assert) {
     osmosis.get(url + '/query')
     .find('div')
     .set({ content: 'p' })
-    .data((data) => {
+    .data(function (data) {
       found = true
     })
     .done(function () {
@@ -193,7 +193,6 @@ server('/test-test', function (url, req, res) {
 
 server('/query', function (url, req, res) {
     if (url.path === '/query?') {
-        console.log('empty', url)
         res.writeHead(404);
         res.end();
         return;
