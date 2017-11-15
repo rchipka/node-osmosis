@@ -140,6 +140,19 @@ module.exports.multiple = function (assert) {
     }, 5000);
 }
 
+module.exports.absentQueryString = function (assert) {
+    var found = false;
+    osmosis.get(url + '/query')
+    .find('div')
+    .set({ content: 'p' })
+    .data((data) => {
+      found = true
+    })
+    .done(function () {
+        assert.ok(found);
+        assert.done();
+    });
+};
 
 server('/get', function (url, req, res) {
     if (url.query.redirect !== undefined) {
@@ -175,5 +188,17 @@ server('/redirect', function (url, req, res) {
 
 server('/test-test', function (url, req, res) {
     res.write('<p>success</p>');
+    res.end();
+});
+
+server('/query', function (url, req, res) {
+    if (url.path === '/query?') {
+        console.log('empty', url)
+        res.writeHead(404);
+        res.end();
+        return;
+    }
+
+    res.write('<div><p>test</p></div>');
     res.end();
 });
