@@ -11,7 +11,8 @@ module.exports.link = function (assert) {
     .paginate('a[rel="next"]', 3)
     .set('page', 'div')
     .then(function (context, data) {
-        var page = context.request.params.page || 1;
+        var params = context.request.params;
+        var page = (params && params.page) || 1;
 
         assert.equal(page, data.page);
         assert.equal(page, ++count);
@@ -29,7 +30,8 @@ module.exports.param = function (assert) {
     .paginate({ page: +1 }, 3)
     .set('page', 'div')
     .then(function (context, data) {
-        var page = context.request.params.page || 1;
+        var params = context.request.params;
+        var page = (params && params.page) || 1;
 
         assert.equal(page, data.page);
         assert.equal(page, ++count);
@@ -47,7 +49,8 @@ module.exports.form = function (assert) {
     .paginate('form', 3)
     .set('page', 'div')
     .then(function (context, data) {
-        var page = context.request.params.page || 1;
+        var params = context.request.params;
+        var page = (params && params.page) || 1;
 
         assert.ok(page == data.page);
         assert.ok(page == ++count);
