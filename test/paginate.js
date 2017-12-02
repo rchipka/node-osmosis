@@ -61,6 +61,51 @@ module.exports.form = function (assert) {
     });
 };
 
+module.exports.func_url = function (assert) {
+    var count = 0;
+
+    osmosis.get(url + '/paginate', { page: 1 })
+    .paginate(function (document, data) {
+        return document.request.pathname + '?page=' +
+            (parseInt(document.request.query.page, 10) + 1);
+    }, 3)
+    .set('page', 'div')
+    .then(function (context, data) {
+        var params = context.request.params;
+        var page = (params && params.page) || 1;
+
+        assert.equal(page, data.page);
+        assert.equal(page, ++count);
+    })
+    .done(function () {
+        assert.ok(count > 1);
+        assert.done();
+    });
+};
+
+module.exports.func_obj = function (assert) {
+    var count = 0;
+
+    osmosis.get(url + '/paginate', { page: 1 })
+    .paginate(function (document, data) {
+        return {
+            page: (parseInt(document.request.query.page, 10) + 1)
+        };
+    }, 3)
+    .set('page', 'div')
+    .then(function (context, data) {
+        var params = context.request.params;
+        var page = (params && params.page) || 1;
+
+        assert.equal(page, data.page);
+        assert.equal(page, ++count);
+    })
+    .done(function () {
+        assert.ok(count > 1);
+        assert.done();
+    });
+};
+
 server('/paginate', function (url, req, res, data) {
     res.setHeader("Content-Type", "text/html");
     var page = 1;
