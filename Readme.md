@@ -84,9 +84,4 @@ For documentation and examples check out [https://rchipka.github.io/node-osmosis
 Please consider a donation if you depend on web scraping and Osmosis makes your job a bit easier.
 Your contribution allows me to spend more time making this the best web scraper for Node.
 
-### Donation offers:
-
- - $25 - A custom Osmosis scraper to extract the data you need efficiently and in as few lines of code as possible.
- - $25/month - Become a sponsor. Your company will be listed on this page. Priority support and bug fixes.
-
 [![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?item_name=node-osmosis&cmd=_donations&business=NAXMWBMWKUWUU)
