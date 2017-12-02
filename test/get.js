@@ -142,7 +142,10 @@ module.exports.multiple = function (assert) {
 
 module.exports.absentQueryString = function (assert) {
     var found = false;
-    osmosis.get(url + '/query')
+    osmosis.get(url + '/test-query-string')
+    .then(function (document) {
+        assert.strictEqual(document.location.href, 'http://' + server.host + ':' + server.port + '/test-query-string');
+    })
     .find('div')
     .set({ content: 'p' })
     .data(function (data) {
@@ -191,8 +194,8 @@ server('/test-test', function (url, req, res) {
     res.end();
 });
 
-server('/query', function (url, req, res) {
-    if (url.path === '/query?') {
+server('/test-query-string', function (url, req, res) {
+    if (url.path === '/test-query-string?') {
         res.writeHead(404);
         res.end();
         return;
