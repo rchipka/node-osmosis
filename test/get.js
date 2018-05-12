@@ -159,7 +159,7 @@ module.exports.multiple = function (assert) {
     }, 5000);
 }
 
-module.exports.function_url = function (assert) {
+module.exports.xml = function (assert) {
   osmosis.get(url + '/xml-auto')
     .then(function (context, data) {
         assert.equal(context.get('link').text(), 'http://example.com');
@@ -175,6 +175,24 @@ module.exports.function_url = function (assert) {
         assert.equal(context.get('link').text(), 'http://example.com');
     })
     .done(function () {
+        assert.done();
+    });
+};
+
+module.exports.error_xml_parse = function (assert) {
+    var tries = 4;
+
+    osmosis.get(url + '/get')
+    .config('parse_as', 'xml')
+    .config('tries', tries)
+    .error(function (msg) {
+        // Multiply root elements are not allowed
+        if (msg.indexOf('parsing error') > -1) {
+            tries--;
+        }
+    })
+    .done(function () {
+        assert.strictEqual(tries, 0);
         assert.done();
     });
 };
