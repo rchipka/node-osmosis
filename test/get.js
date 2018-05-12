@@ -22,6 +22,25 @@ module.exports.function_url = function (assert) {
     });
 };
 
+module.exports.function_params = function (assert) {
+    osmosis.get(url + '/test-test')
+    .then(function (context, data, next) {
+        data.name = 'test';
+        next(context, data);
+    })
+    .get(url + '/get', function (context, data) {
+        var params = {};
+        params[data.name] = context.get('p').text();
+        return params;
+    })
+    .then(function (context) {
+        assert.ok(context.get('div').text().indexOf('success') !== -1);
+    })
+    .done(function () {
+        assert.done();
+    });
+};
+
 module.exports.redirect = function (assert) {
     var calledThen = false,
         logged = false;
