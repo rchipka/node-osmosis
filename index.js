@@ -62,7 +62,6 @@ function Osmosis(url, params) {
     this.queue    = new Queue(this);
     this.command  = new Command(this);
     this.id       = ++instanceId;
-    this.throttle = new RateLimiter(999, 1, true);
 }
 
 
@@ -74,6 +73,7 @@ function Osmosis(url, params) {
  * @property {string} accept             - HTTP Accept header
  * @property {bool}   compressed         - Compress HTTP requests
  * @property {number} concurrency        - Number of simultaneous HTTP requests
+ * @property {RateLimiter} throttle      - RateLimiter object to throttle following requests
  * @property {bool}   decode_response    - Decode compressed HTTP responses
  * @property {number} follow             - Number of redirects to follow
  * @property {bool}   follow_set_cookies - Set cookies for redirects
@@ -93,6 +93,7 @@ Osmosis.prototype.opts = {
                             'application/xml;q=0.9,*/*;q=0.8',
     compressed:             true,
     concurrency:            5,
+    throttle:               new RateLimiter(999, 1, true),
     decode_response:        true,
     follow:                 3,
     follow_set_cookies:     true,
@@ -186,7 +187,7 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
         opts.user_agent = opts.user_agent();
     }
 
-    this.throttle.removeTokens(1, function(err, remainingRequests) {
+    opts.throttle.removeTokens(1, function(err, remainingRequests) {
     request(url.method,
             url,
             url.params,
@@ -329,7 +330,7 @@ Osmosis.prototype.resources = function () {
                 'requests: '  + this.requests +
                               ' (' + this.queue.requests + ' queued), ' +
 
-                'throttled: ' + parseInt(this.throttle.getTokensRemaining()) + ', ' +
+                'throttled: ' + parseInt(this.opts.throttle.getTokensRemaining()) + ', ' +
 
                 'RAM: '       + toMB(mem.rss) + ' (' + memDiff + '), ' +
 
