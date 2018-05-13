@@ -9,10 +9,10 @@ var osmosis = require('../index'),
 
 module.exports.config = function (assert) {
     osmosis
-    .config('ext', true);
-
-    osmosis
-    .config('one', 1);
+    .config({
+        'ext': true,
+        'one': 1
+    });
 
     osmosis.parse(html)
     .config('proxy', 'localhost')
