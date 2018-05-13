@@ -324,21 +324,21 @@ Osmosis.prototype.resources = function () {
     }
 
     this.command.debug(
-                'stack: '    + this.queue.count + ', ' +
+                'stack: '     + this.queue.count + ', ' +
 
-                'requests: ' + this.requests +
-                             ' (' + this.queue.requests + ' queued), ' +
+                'requests: '  + this.requests +
+                              ' (' + this.queue.requests + ' queued), ' +
 
-                'tokens: ' + parseInt(this.throttle.getTokensRemaining()) + ', ' +
+                'throttled: ' + parseInt(this.throttle.getTokensRemaining()) + ', ' +
 
-                'RAM: '      + toMB(mem.rss) + ' (' + memDiff + '), ' +
+                'RAM: '       + toMB(mem.rss) + ' (' + memDiff + '), ' +
 
-                'libxml: '   + ((libxml_mem / mem.rss) * 100).toFixed(1) +
-                             '% (' + nodes + ' nodes), ' +
+                'libxml: '    + ((libxml_mem / mem.rss) * 100).toFixed(1) +
+                              '% (' + nodes + ' nodes), ' +
 
-                'heap: '     + ((mem.heapUsed / mem.heapTotal) * 100)
-                             .toFixed(0) + '% of ' +
-                             toMB(mem.heapTotal)
+                'heap: '      + ((mem.heapUsed / mem.heapTotal) * 100)
+                              .toFixed(0) + '% of ' +
+                              toMB(mem.heapTotal)
             );
 
     memoryUsage = mem.rss;
