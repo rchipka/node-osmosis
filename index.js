@@ -99,6 +99,7 @@ Osmosis.prototype.opts = {
     parse_cookies:          true, // Parse "Set-Cookie" header
     parse_response:         false,
     rejectUnauthorized:     false,
+    error_status_codes:     '400-500',
     statsThreshold:         25,
     timeout:                30 * 1000,
     tries:                  3,
