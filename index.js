@@ -180,6 +180,7 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
     this.requests++;
     this.queue.requests++;
     this.queue.push();
+    opts.user_agent = typeof opts.user_agent === "function" ? opts.user_agent() : opts.user_agent;
 
     request(url.method,
             url,
