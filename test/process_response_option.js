@@ -2,6 +2,14 @@ var osmosis = require('../index'),
     server  = require('./server'),
     url     = server.host + ':' + server.port;
 
+
+module.exports.process_response_default_none = function (assert) {
+    test_process_response(
+        '/response-code-200', 'hi', undefined, assert,
+        false
+    );
+};
+
 module.exports.process_response_fail_on_200 = function (assert) {
     test_process_response(
         '/response-code-200', undefined, '200-die', assert,
