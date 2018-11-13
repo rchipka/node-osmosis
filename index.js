@@ -1,9 +1,10 @@
 'use strict';
 
-var Command = require('./lib/Command.js'),
-    Queue   = require('./lib/Queue.js'),
-    request = require('./lib/Request.js'),
-    libxml  = require('libxmljs-dom'),
+var Command     = require('./lib/Command.js'),
+    Queue       = require('./lib/Queue.js'),
+    request     = require('./lib/Request.js'),
+    libxml      = require('libxmljs-dom'),
+    RateLimiter = require('limiter').RateLimiter,
     instanceId      = 0,
     memoryUsage     = 0,
     cachedSelectors = {},
@@ -58,9 +59,9 @@ function Osmosis(url, params) {
         return Osmosis.get(url, params);
     }
 
-    this.queue   = new Queue(this);
-    this.command = new Command(this);
-    this.id      = ++instanceId;
+    this.queue    = new Queue(this);
+    this.command  = new Command(this);
+    this.id       = ++instanceId;
 }
 
 
@@ -72,6 +73,7 @@ function Osmosis(url, params) {
  * @property {string} accept             - HTTP Accept header
  * @property {bool}   compressed         - Compress HTTP requests
  * @property {number} concurrency        - Number of simultaneous HTTP requests
+ * @property {RateLimiter} throttle      - RateLimiter object to throttle following requests
  * @property {bool}   decode_response    - Decode compressed HTTP responses
  * @property {number} follow             - Number of redirects to follow
  * @property {bool}   follow_set_cookies - Set cookies for redirects
@@ -91,6 +93,7 @@ Osmosis.prototype.opts = {
                             'application/xml;q=0.9,*/*;q=0.8',
     compressed:             true,
     concurrency:            5,
+    throttle:               new RateLimiter(999, 1, true),
     decode_response:        true,
     follow:                 3,
     follow_set_cookies:     true,
@@ -147,7 +150,7 @@ Osmosis.prototype.config = function (option, value) {
 
 /**
  * Run (or re-run) an Osmosis instance.
- *g
+ *
  * If you frequently use the same Osmosis instance
  * (such as in an Express server), it's much more efficient to
  * initialize the instance once and repeatedly use `run` as needed.
@@ -184,6 +187,7 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
         opts.user_agent = opts.user_agent();
     }
 
+    opts.throttle.removeTokens(1, function(err, remainingRequests) {
     request(url.method,
             url,
             url.params,
@@ -229,6 +233,7 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
                                      href + ' -> ' + new_url);
                 }
             });
+    });
 };
 
 /**
@@ -320,19 +325,21 @@ Osmosis.prototype.resources = function () {
     }
 
     this.command.debug(
-                'stack: '    + this.queue.count + ', ' +
+                'stack: '     + this.queue.count + ', ' +
 
-                'requests: ' + this.requests +
-                             ' (' + this.queue.requests + ' queued), ' +
+                'requests: '  + this.requests +
+                              ' (' + this.queue.requests + ' queued), ' +
 
-                'RAM: '      + toMB(mem.rss) + ' (' + memDiff + '), ' +
+                'throttled: ' + parseInt(this.opts.throttle.getTokensRemaining()) + ', ' +
 
-                'libxml: '   + ((libxml_mem / mem.rss) * 100).toFixed(1) +
-                             '% (' + nodes + ' nodes), ' +
+                'RAM: '       + toMB(mem.rss) + ' (' + memDiff + '), ' +
 
-                'heap: '     + ((mem.heapUsed / mem.heapTotal) * 100)
-                             .toFixed(0) + '% of ' +
-                             toMB(mem.heapTotal)
+                'libxml: '    + ((libxml_mem / mem.rss) * 100).toFixed(1) +
+                              '% (' + nodes + ' nodes), ' +
+
+                'heap: '      + ((mem.heapUsed / mem.heapTotal) * 100)
+                              .toFixed(0) + '% of ' +
+                              toMB(mem.heapTotal)
             );
 
     memoryUsage = mem.rss;
