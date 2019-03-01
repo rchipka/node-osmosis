@@ -455,4 +455,6 @@ libxml.Element.prototype.find = function (selector) {
  * @param {data} data - The current data object.
  */
 
+Osmosis.libxmljs = libxml;
+
 module.exports = Osmosis;
