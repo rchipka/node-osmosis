@@ -227,13 +227,17 @@ server('/1', function (url, req, res) {
     res.setHeader("Content-Type", "text/html");
     res.write('<head><title>1</title></head>' +
               '<body><a href="/2"></a><a href="/3"></a></body>');
-    res.end();
+    setTimeout(function () {
+        res.end();
+    }, 500);
 });
 
 server('/2', function (url, req, res) {
     res.setHeader("Content-Type", "text/html");
     res.write('<head><title>2</title></head><body></body>');
-    res.end();
+    setTimeout(function () {
+        res.end();
+    }, 250);
 });
 
 server('/3', function (url, req, res) {

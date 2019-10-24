@@ -14,6 +14,23 @@
  * Add warnings for parser errors?
  * Switch to semantic versioning?
 
+## Next major release:
+
+ * Event/error handling
+ * Error.code = 404, 'timeout', etc.
+ * Error.module = 'http', 'dom', etc.
+  * return true = retry, false = stop, anything else = continue
+ * Event for discontinued context/data
+ * Module system using osmosis.require and modules prefixed with `osmosis-`
+ * Way to trigger DOM
+ * Throw unhandled errors?
+ * `.while()` to do things more than once as long as they call next()
+
+## 0.1.5
+
+ * Fixed bug where .get() without `params` caused empty query string ('?')
+ * Preserve sort order for `.follow()` results within `.set()`
+
 ## 0.1.4
 
 #### `get`

@@ -22,6 +22,25 @@ module.exports.function_url = function (assert) {
     });
 };
 
+module.exports.function_params = function (assert) {
+    osmosis.get(url + '/test-test')
+    .then(function (context, data, next) {
+        data.name = 'test';
+        next(context, data);
+    })
+    .get(url + '/get', function (context, data) {
+        var params = {};
+        params[data.name] = context.get('p').text();
+        return params;
+    })
+    .then(function (context) {
+        assert.ok(context.get('div').text().indexOf('success') !== -1);
+    })
+    .done(function () {
+        assert.done();
+    });
+};
+
 module.exports.redirect = function (assert) {
     var calledThen = false,
         logged = false;
@@ -140,6 +159,22 @@ module.exports.multiple = function (assert) {
     }, 5000);
 }
 
+module.exports.absentQueryString = function (assert) {
+    var found = false;
+    osmosis.get(url + '/test-query-string')
+    .then(function (document) {
+        assert.strictEqual(document.location.href, 'http://' + server.host + ':' + server.port + '/test-query-string');
+    })
+    .find('div')
+    .set({ content: 'p' })
+    .data(function (data) {
+      found = true
+    })
+    .done(function () {
+        assert.ok(found);
+        assert.done();
+    });
+};
 
 server('/get', function (url, req, res) {
     if (url.query.redirect !== undefined) {
@@ -175,5 +210,16 @@ server('/redirect', function (url, req, res) {
 
 server('/test-test', function (url, req, res) {
     res.write('<p>success</p>');
+    res.end();
+});
+
+server('/test-query-string', function (url, req, res) {
+    if (url.path === '/test-query-string?') {
+        res.writeHead(404);
+        res.end();
+        return;
+    }
+
+    res.write('<div><p>test</p></div>');
     res.end();
 });

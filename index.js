@@ -179,6 +179,10 @@ Osmosis.prototype.request = function (url, opts, callback, tries) {
     this.requests++;
     this.queue.requests++;
     this.queue.push();
+    
+    if (typeof opts.user_agent === 'function') {
+        opts.user_agent = opts.user_agent();
+    }
 
     request(url.method,
             url,
@@ -450,5 +454,7 @@ libxml.Element.prototype.find = function (selector) {
  * @param {context} context - The current XML/HTML context node.
  * @param {data} data - The current data object.
  */
+
+Osmosis.libxmljs = libxml;
 
 module.exports = Osmosis;
