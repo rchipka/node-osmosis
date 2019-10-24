@@ -87,6 +87,31 @@ module.exports.unicode = function (assert) {
     })
 }
 
+module.exports.validURL = function (assert) {
+    var data,
+        pattern = /[А-я]/g,
+        link = 'https://worldofwarcraft.com/ru-ru/character/eu/soulflayer/ксокслав',
+        expect = 'https://worldofwarcraft.com/ru-ru/character/eu/soulflayer/%D0%BA%D1%81%D0%BE%D0%BA%D1%81%D0%BB%D0%B0%D0%B2',
+        match = link.match(pattern);
+
+    if(match) {
+        link = encodeURI(link);
+    }
+
+    assert.equal(link,expect);
+
+    osmosis.get(link)
+    .find('.CharacterHeader-detail:first-child')
+    .set('detail')
+    .data(function(value) {
+        assert.equal(value.detail,'120 Зандаларка Паладин (Свет)');
+        data = value;
+    })
+    .done(function() {
+        console.log(data)
+    })
+}
+
 /*
  * DEPRECATED. Use .find(selector).get(callback) instead.
 
