@@ -138,7 +138,7 @@ Osmosis.prototype.config = function (option, value) {
 
     if (value !== undefined) {
         opts[option] = value;
-    } else if (key !== undefined) {
+    } else if (option !== undefined) {
         for (key in option) {
             opts[key] = option[key];
         }
