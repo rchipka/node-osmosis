@@ -64,6 +64,8 @@ var osmosis = require('../index'),
             { url: '/1', link: 1 },
             { url: '/2', link: 2 }
         ],
+        links_count: 2,
+        const_value: "not a selector",
         page2: { title: 2 }
     },
     url = server.host + ':' + server.port;
@@ -104,6 +106,12 @@ module.exports.callbacks = function (assert) {
                 .set('url', function (link) {
                     return link.getAttribute("href");
                 }),
+        links_count: function (context) {
+          return context.find("a").length;
+        },
+        const_value: function (context) {
+            return "not a selector";
+        },
         page2: osmosis.get(function (doc) {
             return doc.querySelector('a:last');
         }).set('title', 'title')
