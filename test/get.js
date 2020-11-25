@@ -159,6 +159,44 @@ module.exports.multiple = function (assert) {
     }, 5000);
 }
 
+module.exports.xml = function (assert) {
+  osmosis.get(url + '/xml-auto')
+    .then(function (context, data) {
+        assert.equal(context.get('link').text(), 'http://example.com');
+    })
+    .get(url + '/xml')
+    .then(function (context, data) {
+        // In html mode <link> tag treated as singleton tag and can't have any body
+        assert.notEqual(context.get('link').text(), 'http://example.com');
+    })
+    .get(url + '/xml')
+    .config('parse_as', 'xml')
+    .then(function (context, data) {
+        assert.equal(context.get('link').text(), 'http://example.com');
+    })
+    .done(function () {
+        assert.done();
+    });
+};
+
+module.exports.error_xml_parse = function (assert) {
+    var tries = 4;
+
+    osmosis.get(url + '/get')
+    .config('parse_as', 'xml')
+    .config('tries', tries)
+    .error(function (msg) {
+        // Multiply root elements are not allowed
+        if (msg.indexOf('parsing error') > -1) {
+            tries--;
+        }
+    })
+    .done(function () {
+        assert.strictEqual(tries, 0);
+        assert.done();
+    });
+};
+
 module.exports.absentQueryString = function (assert) {
     var found = false;
     osmosis.get(url + '/test-query-string')
@@ -200,6 +238,17 @@ server('/error-redirect', function (url, req, res) {
 server('/error-parse', function (url, req, res) {
     res.writeHead(200);
     res.end();
+});
+
+server('/xml-auto', function (url, req, res) {
+  res.setHeader('Content-Type', 'application/xml');
+  res.write('<rss><link>http://example.com</link></rss>');
+  res.end();
+});
+
+server('/xml', function (url, req, res) {
+  res.write('<rss><link>http://example.com</link></rss>');
+  res.end();
 });
 
 

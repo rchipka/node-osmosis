@@ -81,6 +81,7 @@ function Osmosis(url, params) {
  * @property {bool}   timeout            - HTTP request timeout
  * @property {bool}   tries              - HTTP request attempts
  * @property {bool}   user_agent         - HTTP user agent
+ * @property {string} parse_as           - Chose between html and xml parsing mode. Default - chose automatically based on content-type
  * @memberof Osmosis
  * @instance
  * @default
@@ -102,6 +103,7 @@ Osmosis.prototype.opts = {
     statsThreshold:         25,
     timeout:                30 * 1000,
     tries:                  3,
+    parse_as:               'auto',
     user_agent:             'Mozilla/5.0 (Windows NT x.y; rv:10.0) ' +
                             'Gecko/20100101 Firefox/10.0'
 };
