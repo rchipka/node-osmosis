@@ -72,6 +72,25 @@ module.exports.form_attr = function (assert) {
     });
 };
 
+module.exports.context_data = function (assert) {
+    var calledThen = false;
+    var inputs = getInputs(2, 'sub1');
+
+    inputs['it1'] = 'success';
+    osmosis.get(url + '/submit-form')
+    .submit('form[2]', function(context) {
+        return {it1: context.get('#dynamic-data').text()};
+    })
+    .then(function (context) {
+        calledThen = true;
+        assert.deepEqual(JSON.parse(context.get('#data').text()), inputs);
+    })
+    .done(function () {
+        assert.ok(calledThen);
+        assert.done();
+    });
+};
+
 module.exports.multipart = function (assert) {
     var calledThen = false;
 
@@ -200,6 +219,7 @@ server('/submit-form', function (url, req, res, data) {
         }
 
         out += '</form>';
+        out += '<div id="dynamic-data">success</div>';
     }
 
     res.end(out);
